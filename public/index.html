@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Баланс — Осознанная продуктивность</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], serif: ['Playfair Display', 'serif'] } } } }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        /* Скрываем скроллбар там, где он не нужен */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Кастомный темный скроллбар для всего приложения */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        * { scrollbar-width: thin; scrollbar-color: #1E293B transparent; }
+
+        html, body { max-width: 100vw; overflow: hidden; }
+        .fade-enter { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Стилизация селектов */
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+    </style>
+</head>
+<body class="bg-[#0B0F19] text-slate-100 font-sans h-screen w-full selection:bg-teal-500 selection:text-black">
+
+    <div x-data="{
+        currentTab: 'dashboard',
+        energy: '😐 Нормально',
+        habits: [], tasks: [],
+        budget: { monthly: 45000, spentToday: 0, dailyLimit: 1500 },
+        transactions: [], transactionsSummary: {}, habitsStats: {}, categories: [],
+        newExpenseAmount: '', newFinanceAmount: '', newFinanceCategory: '', newCategoryName: '',
+
+        newTaskName: '', newTaskType: 'routine',
+        showRepeatSettings: false, newTaskDuration: '1', selectedDaysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+        selectedDate: '', plannerDays: [], previewDates: [],
+
+        editMonthlyBudget: 0, editDailyLimit: 0,
+        editUserName: '', newHabitName: '',
+        calMonthName: '', calDaysInMonth: 30, calEmptyDays: 0, calYearMonth: '',
+
+        token: localStorage.getItem('token') || '',
+        userName: '', authName: '', authEmail: '', authPassword: '',
+        isRegisterMode: false, authError: '',
+        isLoading: false,
+
+        getLocalISODate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        },
+
+        init() {
+            this.selectedDate = this.getLocalISODate(new Date());
+            this.initCalendar();
+            this.generatePlannerDays(this.selectedDate);
+
+            // Восстановление состояния энергии на текущий день
+            const savedEnergy = JSON.parse(localStorage.getItem('energyState') || '{}');
+            if (savedEnergy.date === this.getLocalISODate(new Date()) && savedEnergy.value) {
+                this.energy = savedEnergy.value;
+            } else {
+                this.energy = '😐 Нормально';
+            }
+
+            this.$watch('newTaskDuration', () => this.updatePreviewDates());
+            this.$watch('selectedDate', () => this.updatePreviewDates());
+            this.updatePreviewDates();
+
+            if (this.token) this.loadData();
+        },
+
+        setEnergy(val) {
+            this.energy = val;
+            localStorage.setItem('energyState', JSON.stringify({
+                date: this.getLocalISODate(new Date()),
+                value: val
+            }));
+        },
+
+        updatePreviewDates() {
+            const start = new Date(this.selectedDate);
+            const duration = parseInt(this.newTaskDuration);
+            this.previewDates = [];
+            for(let i = 0; i < duration; i++) {
+                let d = new Date(start);
+                d.setDate(start.getDate() + i);
+                this.previewDates.push({
+                    dateStr: this.getLocalISODate(d),
+                    dayNum: d.getDate(),
+                    dayName: d.toLocaleDateString('ru-RU', { weekday: 'short' }),
+                    selected: true
+                });
+            }
+        },
+
+        togglePreviewDate(index) {
+            this.previewDates[index].selected = !this.previewDates[index].selected;
+        },
+
+        initCalendar() {
+            const now = new Date();
+            this.calMonthName = now.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+            this.calDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            let firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+            this.calEmptyDays = firstDay === 0 ? 6 : firstDay - 1;
+            this.calYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        },
+
+        generatePlannerDays(centerDateStr) {
+            let centerDate;
+            if (centerDateStr) {
+                const [y, m, d] = centerDateStr.split('-');
+                centerDate = new Date(y, m - 1, d);
+            } else {
+                centerDate = new Date();
+            }
+
+            const days = [];
+            for (let i = -15; i <= 15; i++) {
+                let d = new Date(centerDate);
+                d.setDate(centerDate.getDate() + i);
+                days.push({
+                    fullDate: this.getLocalISODate(d),
+                    dayNum: d.getDate(),
+                    dayName: d.toLocaleDateString('ru-RU', { weekday: 'short' }),
+                    monthName: d.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', ''),
+                    isToday: this.getLocalISODate(d) === this.getLocalISODate(new Date())
+                });
+            }
+            this.plannerDays = days;
+            this.scrollToSelectedDate();
+        },
+
+        scrollToSelectedDate() {
+            setTimeout(() => {
+                const container = document.getElementById('date-ribbon');
+                const activeBtn = container?.querySelector('.bg-emerald-500');
+                if(container && activeBtn) {
+                    container.scrollTo({
+                        left: activeBtn.offsetLeft - (container.clientWidth / 2) + (activeBtn.clientWidth / 2),
+                        behavior: 'smooth'
+                    });
+                }
+            }, 50);
+        },
+
+        getHeaders() { return { 'Authorization': 'Bearer ' + this.token, 'Content-Type': 'application/json' }; },
+        formatMoney(num) { return new Intl.NumberFormat('ru-RU').format(num || 0).replace(/\u00A0/g, ' ').replace(/\u202F/g, ' ') + ' ₽'; },
+
+        get currentDateFormatted() {
+            if (!this.selectedDate) return '';
+            const [y, m, d] = this.selectedDate.split('-');
+            const date = new Date(y, m - 1, d);
+            const options = { weekday: 'long', day: 'numeric', month: 'long' };
+            let str = date.toLocaleDateString('ru-RU', options);
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        },
+
+        get tasksProgress() {
+            if (this.tasks.length === 0) return 0;
+            return Math.round((this.tasks.filter(t => t.done).length / this.tasks.length) * 100);
+        },
+
+        async loadData() {
+            this.isLoading = true;
+            try {
+                const meRes = await fetch('/api/users/me', { headers: this.getHeaders() });
+                if (!meRes.ok) return this.logout();
+                const meData = await meRes.json();
+                this.userName = meData.name;
+                this.editUserName = meData.name;
+
+                const [habitsRes, budgetRes, tasksRes, txRes, summaryRes, statsRes, catRes] = await Promise.all([
+                    fetch('/api/habits', { headers: this.getHeaders() }),
+                    fetch('/api/budget', { headers: this.getHeaders() }),
+                    fetch(`/api/tasks?date=${this.selectedDate}`, { headers: this.getHeaders() }),
+                    fetch('/api/transactions', { headers: this.getHeaders() }),
+                    fetch('/api/transactions/summary', { headers: this.getHeaders() }),
+                    fetch('/api/habits/stats', { headers: this.getHeaders() }),
+                    fetch('/api/categories', { headers: this.getHeaders() })
+                ]);
+
+                this.habits = await habitsRes.json();
+                this.budget = await budgetRes.json();
+                this.editMonthlyBudget = this.budget.monthly;
+                this.editDailyLimit = this.budget.dailyLimit;
+
+                this.tasks = await tasksRes.json();
+                this.transactions = await txRes.json();
+                this.transactionsSummary = await summaryRes.json();
+                this.habitsStats = await statsRes.json();
+                this.categories = await catRes.json();
+
+                if (this.categories.length > 0 && !this.newFinanceCategory) {
+                    this.newFinanceCategory = this.categories[0].name;
+                }
+            } catch (err) {
+                console.error('Ошибка загрузки:', err);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        async loadTasks() {
+            const tasksRes = await fetch(`/api/tasks?date=${this.selectedDate}`, { headers: this.getHeaders() });
+            this.tasks = await tasksRes.json();
+        },
+
+        selectDate(dateStr) {
+            this.selectedDate = dateStr;
+            this.generatePlannerDays(dateStr);
+            this.loadTasks();
+        },
+
+        logout() {
+            localStorage.removeItem('token');
+            this.token = ''; this.userName = ''; this.currentTab = 'dashboard';
+        },
+
+        async handleAuth() {
+            this.authError = '';
+            if (!this.authEmail || !this.authPassword || (this.isRegisterMode && !this.authName)) return this.authError = 'Заполните все поля';
+            const endpoint = this.isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+            const payload = { email: this.authEmail, password: this.authPassword };
+            if (this.isRegisterMode) payload.name = this.authName;
+            try {
+                const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (!res.ok) return this.authError = Array.isArray(data.detail) ? 'Введите корректный Email' : data.detail;
+                this.token = data.access_token;
+                localStorage.setItem('token', this.token);
+                this.authEmail = ''; this.authPassword = ''; this.authName = '';
+                this.loadData();
+            } catch (err) { this.authError = 'Нет связи с сервером'; }
+        },
+
+        get activeHabitsCount() { return this.habits.filter(h => h.done).length },
+        get dailyRemaining() { return this.budget.dailyLimit - this.budget.spentToday },
+        get habitsProgressPercent() { return this.habits.length ? Math.round((this.activeHabitsCount / this.habits.length) * 100) : 0 },
+        get strokeDashoffset() { return 2 * Math.PI * 40 - (this.habitsProgressPercent / 100) * 2 * Math.PI * 40; },
+        get monthlySpentTotal() { return Object.values(this.transactionsSummary).reduce((a, b) => a + b, 0); },
+
+        async toggleHabit(habit) {
+            const res = await fetch('/api/habits/' + habit.id + '/toggle', { method: 'POST', headers: this.getHeaders() });
+            if (res.ok) { habit.done = !habit.done; this.habitsStats = await (await fetch('/api/habits/stats', { headers: this.getHeaders() })).json(); }
+        },
+        async addHabit() {
+            if (this.newHabitName.trim() === '') return;
+            const res = await fetch('/api/habits', { method: 'POST', headers: this.getHeaders(), body: JSON.stringify({ name: this.newHabitName }) });
+            if (res.ok) { this.habits.push(await res.json()); this.newHabitName = ''; }
+        },
+        async deleteHabit(id) {
+            const res = await fetch('/api/habits/' + id, { method: 'DELETE', headers: this.getHeaders() });
+            if (res.ok) { this.habits = this.habits.filter(h => h.id !== id); }
+        },
+        async updateHabitName(habit) {
+            await fetch('/api/habits/' + habit.id, { method: 'PUT', headers: this.getHeaders(), body: JSON.stringify({ name: habit.name }) });
+        },
+
+        async addCategory() {
+            if (this.newCategoryName.trim() === '') return;
+            const res = await fetch('/api/categories', { method: 'POST', headers: this.getHeaders(), body: JSON.stringify({ name: this.newCategoryName }) });
+            if (res.ok) {
+                this.categories.push(await res.json());
+                this.newCategoryName = '';
+            }
+        },
+        async deleteCategory(id) {
+            const res = await fetch('/api/categories/' + id, { method: 'DELETE', headers: this.getHeaders() });
+            if (res.ok) {
+                this.categories = this.categories.filter(c => c.id !== id);
+                if (!this.categories.find(c => c.name === this.newFinanceCategory) && this.categories.length > 0) {
+                    this.newFinanceCategory = this.categories[0].name;
+                }
+            }
+        },
+
+        async saveProfile(event) {
+            const btn = event.target; const orig = btn.innerText; btn.innerText = 'Сохранение...';
+            const res = await fetch('/api/users/me', { method: 'PUT', headers: this.getHeaders(), body: JSON.stringify({ name: this.editUserName }) });
+            if (res.ok) {
+                this.userName = (await res.json()).name;
+                btn.innerText = 'Сохранено ✓';
+                btn.classList.add('bg-emerald-500', 'text-black');
+                btn.classList.remove('bg-slate-800', 'text-slate-300');
+            } else {
+                btn.innerText = 'Ошибка';
+                btn.classList.add('bg-rose-500', 'text-white');
+                btn.classList.remove('bg-slate-800', 'text-slate-300');
+            }
+            setTimeout(() => {
+                btn.innerText = orig;
+                btn.classList.remove('bg-emerald-500', 'text-black', 'bg-rose-500', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            }, 2000);
+        },
+
+        async saveBudget(event) {
+            const btn = event.target; const orig = btn.innerText; btn.innerText = 'Сохранение...';
+            const m = parseFloat(this.editMonthlyBudget) || 0;
+            const d = parseFloat(this.editDailyLimit) || 0;
+            const res = await fetch('/api/budget', { method: 'PUT', headers: this.getHeaders(), body: JSON.stringify({ monthly_budget: m, daily_limit: d }) });
+            if (res.ok) {
+                this.budget.monthly = m; this.budget.dailyLimit = d;
+                btn.innerText = 'Обновлено ✓';
+                btn.classList.add('bg-emerald-500', 'text-black');
+                btn.classList.remove('bg-slate-800', 'text-slate-300');
+            } else {
+                btn.innerText = 'Ошибка';
+                btn.classList.add('bg-rose-500', 'text-white');
+                btn.classList.remove('bg-slate-800', 'text-slate-300');
+            }
+            setTimeout(() => {
+                btn.innerText = orig;
+                btn.classList.remove('bg-emerald-500', 'text-black', 'bg-rose-500', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            }, 2000);
+        },
+
+        async addExpense() {
+            let amount = parseFloat(this.newExpenseAmount);
+            if (isNaN(amount) || amount <= 0) return;
+            const res = await fetch('/api/transactions', { method: 'POST', headers: this.getHeaders(), body: JSON.stringify({ amount: amount, category: 'Разное' }) });
+            if (res.ok) { this.budget.spentToday += amount; this.newExpenseAmount = ''; this.loadData(); }
+        },
+        async addDetailedExpense() {
+            let amount = parseFloat(this.newFinanceAmount);
+            if (isNaN(amount) || amount <= 0) return;
+            const res = await fetch('/api/transactions', { method: 'POST', headers: this.getHeaders(), body: JSON.stringify({ amount: amount, category: this.newFinanceCategory }) });
+            if (res.ok) { this.newFinanceAmount = ''; this.loadData(); }
+        },
+        async deleteTransaction(id) {
+            if(confirm('Удалить эту операцию?')) {
+                const res = await fetch('/api/transactions/' + id, { method: 'DELETE', headers: this.getHeaders() });
+                if (res.ok) this.loadData();
+            }
+        },
+
+        async addTask() {
+            if (this.newTaskName.trim() === '') return;
+            const selectedDates = this.previewDates.filter(d => d.selected).map(d => d.dateStr);
+            if (selectedDates.length === 0) { alert('Выберите хотя бы одну дату для задачи'); return; }
+
+            const payload = { name: this.newTaskName, type: this.newTaskType, dates: selectedDates };
+            const res = await fetch('/api/tasks', { method: 'POST', headers: this.getHeaders(), body: JSON.stringify(payload) });
+
+            if (res.ok) {
+                this.newTaskName = '';
+                this.newTaskDuration = '1';
+                this.updatePreviewDates();
+                this.loadTasks();
+            }
+        },
+
+        async toggleTask(task) {
+            const res = await fetch('/api/tasks/' + task.id + '/toggle', { method: 'POST', headers: this.getHeaders() });
+            if (!res.ok) { task.done = !task.done; alert('Ошибка'); }
+        },
+
+        async deleteTask(task) {
+            let deleteSeries = false;
+            if (task.series_id) {
+                deleteSeries = confirm('Удалить эту задачу на ВСЕ дни (всю серию)?\n\n[ОК] — Удалить везде\n[Отмена] — Удалить только на сегодня');
+            }
+            const res = await fetch(`/api/tasks/${task.id}?delete_series=${deleteSeries}`, { method: 'DELETE', headers: this.getHeaders() });
+            if (res.ok) { this.loadTasks(); }
+        }
+    }" class="flex w-full h-full">
+
+        <!-- ЭКРАН ВХОДА -->
+        <template x-if="!token">
+            <div class="flex-grow flex items-center justify-center p-6 overflow-y-auto w-full fade-enter">
+                <div class="w-full max-w-md space-y-8">
+                    <div class="text-center space-y-2">
+                        <p class="text-xs text-slate-500 tracking-wider uppercase">Осознанность</p>
+                        <h1 class="font-serif text-4xl text-emerald-400 italic">Баланс</h1>
+                        <p class="text-xs text-slate-400 mt-2" x-text="isRegisterMode ? 'Зарегистрируйтесь для создания личного пространства' : 'Войдите в личный кабинет без суеты'"></p>
+                    </div>
+                    <div class="bg-slate-900/60 border border-slate-800/60 p-8 rounded-3xl space-y-5 shadow-2xl backdrop-blur-sm">
+                        <div class="space-y-1.5" x-show="isRegisterMode">
+                            <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Ваше имя</label>
+                            <input type="text" x-model="authName" placeholder="Алексей" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Email</label>
+                            <input type="email" x-model="authEmail" placeholder="your@email.com" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Пароль</label>
+                            <input type="password" x-model="authPassword" placeholder="••••••••" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                        </div>
+                        <template x-if="authError"><p class="text-xs text-rose-400 text-center font-medium bg-rose-500/10 py-2 rounded-xl border border-rose-500/20" x-text="authError"></p></template>
+                        <button @click="handleAuth()" class="w-full bg-emerald-500 hover:bg-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] text-black font-semibold text-sm py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5" x-text="isRegisterMode ? 'Создать аккаунт' : 'Войти в кабинет'"></button>
+                    </div>
+                    <div class="text-center">
+                        <button @click="isRegisterMode = !isRegisterMode; authError = ''" class="text-sm text-slate-400 hover:text-emerald-400 transition-all underline decoration-dotted underline-offset-4" x-text="isRegisterMode ? 'Уже есть аккаунт? Войти' : 'Ещё нет аккаунта? Зарегистрироваться'"></button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ГЛАВНЫЙ ИНТЕРФЕЙС -->
+        <template x-if="token">
+            <div class="flex w-full h-full fade-enter">
+
+                <!-- БОКОВАЯ ПАНЕЛЬ (ДЛЯ ПК) -->
+                <aside class="hidden md:flex flex-col w-64 bg-[#0B0F19] border-r border-slate-800/60 h-full flex-shrink-0 z-30 transition-all duration-300">
+                    <div class="p-6 border-b border-slate-800/40">
+                        <p class="text-[10px] text-slate-500 tracking-wider uppercase">Осознанность</p>
+                        <h1 class="font-serif text-2xl text-emerald-400 italic mt-1">Баланс</h1>
+                    </div>
+
+                    <nav class="flex-1 px-4 py-6 space-y-2">
+                        <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
+                            <span class="text-lg">🏡</span><span>Главная</span>
+                        </button>
+                        <button @click="currentTab = 'tasks'" :class="currentTab === 'tasks' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
+                            <span class="text-lg">📅</span><span>Планер</span>
+                        </button>
+                        <button @click="currentTab = 'finances'" :class="currentTab === 'finances' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
+                            <span class="text-lg">💸</span><span>Бюджет</span>
+                        </button>
+                        <button @click="currentTab = 'habits'" :class="currentTab === 'habits' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
+                            <span class="text-lg">🌱</span><span>Привычки</span>
+                        </button>
+                    </nav>
+
+                    <div class="p-4 border-t border-slate-800/40">
+                        <button @click="currentTab = 'settings'" :class="currentTab === 'settings' ? 'bg-slate-800' : 'hover:bg-slate-800'" class="w-full flex items-center justify-between p-2.5 rounded-xl border border-transparent transition-all group">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold text-xs group-hover:border-emerald-500/50 transition-all shadow-sm" x-text="userName.charAt(0).toUpperCase()"></div>
+                                <span class="text-sm font-medium text-slate-300 truncate max-w-[120px] group-hover:text-white transition-all" x-text="userName"></span>
+                            </div>
+                            <span class="text-slate-500 group-hover:text-emerald-400 transition-all text-lg group-hover:rotate-90 transform duration-300">⚙️</span>
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- ОСНОВНАЯ ОБЛАСТЬ -->
+                <div class="flex-1 flex flex-col h-full relative overflow-hidden bg-[#0B0F19]">
+
+                    <!-- Мобильная шапка -->
+                    <header class="md:hidden p-5 flex justify-between items-center bg-[#0B0F19]/90 backdrop-blur-md border-b border-slate-800/40 z-20">
+                        <div>
+                            <h1 class="font-serif text-lg text-emerald-400 italic">Баланс</h1>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-[10px] bg-slate-800/80 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-medium" x-text="energy"></span>
+                            <button @click="currentTab = 'settings'" class="text-lg text-slate-500 hover:text-emerald-400 transition-all">⚙️</button>
+                        </div>
+                    </header>
+
+                    <!-- Шапка для ПК -->
+                    <header class="hidden md:flex justify-between items-center p-6 border-b border-slate-800/40 bg-[#0B0F19]">
+                        <h2 class="font-serif text-2xl text-slate-100" x-text="
+                            currentTab === 'dashboard' ? 'Обзор дня' :
+                            currentTab === 'tasks' ? 'Умный планер' :
+                            currentTab === 'finances' ? 'Управление бюджетом' :
+                            currentTab === 'settings' ? 'Настройки пространства' : 'Трекер активности'
+                        "></h2>
+                        <div class="flex items-center space-x-2 bg-slate-900/50 p-1 rounded-full border border-slate-800/60 shadow-inner">
+                            <button @click="setEnergy('🧘 Отлично')" :class="energy === '🧘 Отлично' ? 'bg-emerald-500/20 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">🧘 Отлично</button>
+                            <button @click="setEnergy('😐 Нормально')" :class="energy === '😐 Нормально' ? 'bg-slate-700 text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">😐 Нормально</button>
+                            <button @click="setEnergy('🔋 Устал')" :class="energy === '🔋 Устал' ? 'bg-rose-500/20 text-rose-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">🔋 Устал</button>
+                        </div>
+                    </header>
+
+                    <!-- КОНТЕНТ ВКЛАДОК (Компактный контейнер) -->
+                    <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-8">
+                        <div class="max-w-[1440px] mx-auto w-full">
+
+                            <!-- ================= ВКЛАДКА 1: ДАШБОРД ================= -->
+                            <div x-show="currentTab === 'dashboard'" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start fade-enter">
+
+                                <!-- Приветствие -->
+                                <div class="col-span-full mb-2">
+                                    <h2 class="font-serif text-2xl md:text-3xl text-slate-100" x-text="'Привет, ' + userName"></h2>
+                                    <!-- ДИНАМИЧЕСКИЙ ТЕКСТ В ЗАВИСИМОСТИ ОТ ЭНЕРГИИ -->
+                                    <p class="text-sm text-slate-400 mt-1 transition-all duration-300" x-text="
+                                        energy === '🔋 Устал' ? 'Энергия на исходе. Сделай только самое важное и отдохни. 🛌' :
+                                        energy === '🧘 Отлично' ? 'Прекрасный настрой! Идеальный день для свершений. ✨' :
+                                        'Откажись от суеты. Двигайся в своем темпе. 🌿'
+                                    "></p>
+                                </div>
+
+                                <!-- Состояние дня (Только мобилка) -->
+                                <div class="md:hidden bg-slate-900/40 border border-slate-800/60 p-4 rounded-2xl col-span-full">
+                                    <p class="text-xs text-slate-500 uppercase tracking-widest mb-3 font-semibold">Твоё состояние сегодня</p>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <button @click="setEnergy('🧘 Отлично')" class="py-2 px-2 bg-[#1F2937]/50 hover:bg-emerald-500/10 text-xs rounded-xl border border-slate-800 hover:border-emerald-500/30 text-slate-300 transition-all duration-300">🧘 Отлично</button>
+                                        <button @click="setEnergy('😐 Нормально')" class="py-2 px-2 bg-[#1F2937]/50 hover:bg-slate-600 text-xs rounded-xl border border-slate-800 text-slate-300 transition-all duration-300">😐 Нормально</button>
+                                        <button @click="setEnergy('🔋 Устал')" class="py-2 px-2 bg-[#1F2937]/50 hover:bg-rose-500/10 text-xs rounded-xl border border-slate-800 hover:border-rose-500/30 text-slate-300 transition-all duration-300">🔋 Устал</button>
+                                    </div>
+                                </div>
+
+                                <!-- КОЛОНКА 1: Главный фокус дня -->
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl flex flex-col w-full">
+                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">🎯 Главный фокус дня</h3>
+                                    <div class="flex-1 flex flex-col justify-center">
+                                        <template x-for="task in tasks.filter(t => t.type === 'focus')" :key="task.id">
+                                            <label class="flex items-center space-x-4 p-4 cursor-pointer group bg-slate-950/40 rounded-2xl border border-slate-800/50 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-md">
+                                                <div class="relative flex items-center justify-center w-6 h-6 rounded-full border-2 border-slate-600 bg-slate-900/50 group-hover:border-emerald-500 transition-all flex-shrink-0" :class="task.done ? 'border-emerald-500 bg-emerald-500/20' : ''">
+                                                    <input type="checkbox" @change="toggleTask(task)" x-model="task.done" class="opacity-0 absolute w-full h-full cursor-pointer">
+                                                    <span x-show="task.done" class="text-emerald-400 text-xs">✓</span>
+                                                </div>
+                                                <span :class="task.done ? 'line-through text-slate-500' : 'text-slate-200'" class="text-sm md:text-base font-medium transition-all break-words" x-text="task.name"></span>
+                                            </label>
+                                        </template>
+                                        <template x-if="tasks.filter(t => t.type === 'focus').length === 0">
+                                            <div class="text-center py-6">
+                                                <div class="text-3xl mb-3 opacity-30 grayscale">🎯</div>
+                                                <p class="text-xs text-slate-500 italic">Фокус дня не выбран.</p>
+                                                <button @click="currentTab = 'tasks'" class="mt-3 text-[10px] uppercase tracking-wider text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-full hover:bg-emerald-500/10 transition-all">Перейти в планер →</button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- КОЛОНКА 2: Виджет привычек -->
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl flex flex-col w-full">
+                                    <div class="flex justify-between items-start mb-5">
+                                        <div class="space-y-1">
+                                            <span class="text-[9px] bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Дофаминовый трекер</span>
+                                            <h3 class="font-serif text-xl text-slate-100 mt-2 pt-1">Рутина дня</h3>
+                                        </div>
+                                        <div class="relative flex items-center justify-center w-16 h-16 flex-shrink-0">
+                                            <svg class="w-full h-full transform -rotate-90 drop-shadow-md">
+                                                <circle cx="50%" cy="50%" r="40%" stroke="#1F2937" stroke-width="6" fill="transparent" />
+                                                <circle cx="50%" cy="50%" r="40%" stroke="#10B981" stroke-width="6" fill="transparent" stroke-dasharray="163.3" :stroke-dashoffset="163.3 - (habitsProgressPercent / 100) * 163.3" stroke-linecap="round" class="transition-all duration-700 ease-out" />
+                                            </svg>
+                                            <div class="absolute flex flex-col items-center"><span class="text-xs font-bold text-slate-100" x-text="habitsProgressPercent + '%'"></span></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ПЛАШКА ЗАБОТЫ (ПРИВЫЧКИ) -->
+                                    <template x-if="energy === '🔋 Устал'">
+                                        <div class="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-start gap-2 fade-enter">
+                                            <span class="text-base">🛌</span>
+                                            <p>Режим отдыха. Не ругай себя, если сегодня закроешь не все привычки.</p>
+                                        </div>
+                                    </template>
+
+                                    <div class="flex-1 space-y-2.5">
+                                        <template x-for="habit in habits" :key="habit.id">
+                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-950/40 border-slate-800/80 text-slate-400 hover:border-slate-700'" class="w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all duration-300">
+                                                <span class="text-sm font-medium truncate pr-2" x-text="habit.name"></span>
+                                                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all" :class="habit.done ? 'border-emerald-500 bg-emerald-500/20' : 'border-slate-700'">
+                                                    <span x-show="habit.done" class="text-emerald-400 text-[10px]">✓</span>
+                                                </div>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- КОЛОНКА 3: Виджет финансов -->
+                                <div class="bg-gradient-to-br from-slate-900 to-[#1e293b]/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl flex flex-col justify-between w-full">
+                                    <div>
+                                        <div class="flex justify-between items-start gap-2 mb-4">
+                                            <div class="min-w-0">
+                                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Свободный баланс</p>
+                                                <h4 class="text-3xl font-extrabold tracking-tight mt-1.5 break-words drop-shadow-sm" :class="dailyRemaining >= 0 ? 'text-slate-100' : 'text-rose-400'" x-text="formatMoney(dailyRemaining)"></h4>
+                                            </div>
+                                            <span class="flex-shrink-0 text-[10px] bg-slate-950/60 text-slate-400 px-2.5 py-1 rounded-full border border-slate-800/80 font-medium" x-text="'Лимит: ' + formatMoney(budget.dailyLimit)"></span>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col gap-3 mt-4">
+                                        <div class="relative">
+                                            <input type="number" x-model="newExpenseAmount" @keydown.enter="addExpense()" placeholder="Сумма расхода..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">₽</span>
+                                        </div>
+                                        <button @click="addExpense()" class="w-full bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-black font-bold text-sm px-5 py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5">Внести расход</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================= ВКЛАДКА 2: ПЛАНИРОВАНИЕ ================= -->
+                            <div x-show="currentTab === 'tasks'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start fade-enter" x-init="$watch('currentTab', val => { if(val === 'tasks') scrollToSelectedDate() })">
+
+                                <!-- Левая колонка: Календарь и Добавление (4 колонки на ПК) -->
+                                <div class="lg:col-span-5 xl:col-span-4 space-y-6 w-full">
+                                    <div class="bg-slate-900/40 border border-slate-800/60 p-6 rounded-3xl space-y-5 shadow-lg">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <label class="relative cursor-pointer group flex items-center gap-2 bg-slate-950/40 px-3 py-1.5 rounded-xl border border-slate-800/60 hover:border-emerald-500/40 transition-all">
+                                                        <span class="text-sm text-emerald-400 font-semibold capitalize group-hover:text-emerald-300 transition-all" x-text="currentDateFormatted"></span>
+                                                        <span class="text-slate-500 group-hover:text-emerald-400 transition-all text-sm">📅</span>
+                                                        <input type="date" x-model="selectedDate" @change="selectDate($event.target.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                                    </label>
+                                                </div>
+                                                <button x-show="selectedDate !== getLocalISODate(new Date())" @click="selectDate(getLocalISODate(new Date()))" class="mt-3 text-[10px] uppercase font-bold tracking-wider bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full hover:bg-slate-700 hover:text-emerald-400 transition-all z-20 relative border border-slate-700">
+                                                    Сегодня
+                                                </button>
+                                            </div>
+                                            <div class="text-right flex flex-col items-end">
+                                                <span class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Прогресс</span>
+                                                <div class="bg-slate-950/60 px-3 py-1 rounded-xl border border-slate-800/60">
+                                                    <span class="text-xl font-bold text-emerald-400" x-text="tasksProgress + '%'"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Прогресс бар -->
+                                        <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                                            <div class="bg-emerald-500 h-full transition-all duration-700 ease-out" :style="'width: ' + tasksProgress + '%'"></div>
+                                        </div>
+
+                                        <div id="date-ribbon" class="flex space-x-2 overflow-x-auto no-scrollbar py-1 scroll-smooth">
+                                            <template x-for="day in plannerDays" :key="day.fullDate">
+                                                <button @click="selectDate(day.fullDate)"
+                                                        :class="selectedDate === day.fullDate ? 'bg-emerald-500 text-black shadow-[0_4px_15px_rgba(16,185,129,0.4)] scale-105' : (day.isToday ? 'bg-slate-800 border-emerald-500/50 text-slate-200' : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:bg-slate-800')"
+                                                        class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl border transition-all duration-300">
+                                                    <span class="text-[8px] uppercase font-bold opacity-60" x-text="day.monthName"></span>
+                                                    <span class="text-sm font-bold my-0.5" x-text="day.dayNum"></span>
+                                                    <span class="text-[9px] uppercase font-bold" x-text="day.dayName"></span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 rounded-3xl flex flex-col gap-4 focus-within:border-emerald-500/50 transition-all">
+                                        <div class="flex flex-col gap-3">
+                                            <input type="text" x-model="newTaskName" @keydown.enter="addTask()" placeholder="Выгрузить задачу..." class="w-full bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 p-3.5 shadow-inner">
+                                            <div class="flex gap-2">
+                                                <div class="relative flex-grow">
+                                                    <select x-model="newTaskType" class="w-full text-sm bg-slate-800 border border-slate-700 rounded-xl p-3.5 text-slate-200 focus:outline-none cursor-pointer font-medium appearance-none pr-8">
+                                                        <option class="bg-slate-900 text-slate-200" value="routine">Рутина</option>
+                                                        <option class="bg-slate-900 text-slate-200" value="focus">Фокус</option>
+                                                    </select>
+                                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                                    </div>
+                                                </div>
+                                                <button @click="addTask()" class="bg-emerald-500 hover:bg-emerald-400 text-black text-xl font-bold w-12 rounded-xl flex items-center justify-center transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] flex-shrink-0 transform hover:-translate-y-0.5">+</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex flex-col gap-4 pt-4 border-t border-slate-800/60">
+                                            <div class="flex justify-between items-center bg-slate-950/40 p-2 rounded-xl border border-slate-800/40">
+                                                <span class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold pl-2">Период:</span>
+                                                <select x-model="newTaskDuration" class="text-xs bg-transparent border-none text-emerald-400 font-bold focus:outline-none cursor-pointer pr-2 appearance-none">
+                                                    <option class="bg-slate-900 text-slate-200" value="1">Только этот день</option>
+                                                    <option class="bg-slate-900 text-slate-200" value="7">На неделю (7)</option>
+                                                    <option class="bg-slate-900 text-slate-200" value="21">Спринт (21)</option>
+                                                    <option class="bg-slate-900 text-slate-200" value="30">На месяц (30)</option>
+                                                </select>
+                                            </div>
+                                            <div class="flex justify-between items-center" x-show="newTaskDuration > 1" x-transition>
+                                                <span class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Даты:</span>
+                                                <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-1 max-w-[200px]">
+                                                    <template x-for="(pd, index) in previewDates" :key="pd.dateStr">
+                                                        <button @click="togglePreviewDate(index)"
+                                                                :class="pd.selected ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-900 text-slate-500 border border-slate-800'"
+                                                                class="flex-shrink-0 flex flex-col items-center justify-center w-8 h-10 rounded-lg border transition-all">
+                                                            <span class="text-[7px] uppercase font-bold" x-text="pd.dayName"></span>
+                                                            <span class="text-[10px] font-bold" x-text="pd.dayNum"></span>
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Правая колонка: Списки задач (8 колонок на ПК) -->
+                                <div class="lg:col-span-7 xl:col-span-8 space-y-6 w-full">
+                                    <div class="bg-slate-900/20 border border-slate-800/40 p-6 rounded-3xl">
+                                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">🎯</span>
+                                            <span>Главный фокус</span>
+                                            <span class="bg-slate-800 text-emerald-400 px-2 py-0.5 rounded-full text-[10px] border border-slate-700" x-text="tasks.filter(t => t.type === 'focus').length"></span>
+                                        </h4>
+                                        <div class="space-y-3">
+                                            <template x-for="task in tasks.filter(t => t.type === 'focus')" :key="task.id">
+                                                <div class="group flex items-center justify-between p-5 bg-gradient-to-r from-slate-900/80 to-slate-900/40 border border-slate-800/60 rounded-2xl hover:border-emerald-500/40 transition-all duration-300 hover:shadow-md">
+                                                    <label class="flex items-center space-x-4 cursor-pointer flex-grow min-w-0">
+                                                        <div class="relative flex items-center justify-center w-6 h-6 rounded-full border-2 border-slate-600 bg-slate-950/50 group-hover:border-emerald-500 transition-all flex-shrink-0" :class="task.done ? 'border-emerald-500 bg-emerald-500/20' : ''">
+                                                            <input type="checkbox" @change="toggleTask(task)" x-model="task.done" class="opacity-0 absolute w-full h-full cursor-pointer">
+                                                            <span x-show="task.done" class="text-emerald-400 text-xs">✓</span>
+                                                        </div>
+                                                        <span :class="task.done ? 'line-through text-slate-500' : 'text-slate-100'" class="text-sm md:text-base font-semibold transition-all break-words" x-text="task.name"></span>
+                                                    </label>
+                                                    <button @click="deleteTask(task)" class="text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all p-2 flex-shrink-0 bg-slate-950/50 rounded-xl border border-slate-800/50 hover:border-rose-500/30">🗑️</button>
+                                                </div>
+                                            </template>
+                                            <template x-if="tasks.filter(t => t.type === 'focus').length === 0">
+                                                <div class="text-center py-10 bg-slate-900/30 rounded-2xl border border-dashed border-slate-800/60">
+                                                    <div class="text-4xl mb-3 opacity-30 grayscale">🎯</div>
+                                                    <p class="text-xs text-slate-500 font-medium tracking-wide uppercase">Фокус дня не выбран</p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-slate-900/20 border border-slate-800/40 p-6 rounded-3xl">
+                                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">📝</span>
+                                            <span>Текущая рутина</span>
+                                            <span class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full text-[10px] border border-slate-700" x-text="tasks.filter(t => t.type === 'routine').length"></span>
+                                        </h4>
+
+                                        <!-- ПЛАШКА ЗАБОТЫ (РУТИНА) -->
+                                        <template x-if="energy === '🔋 Устал'">
+                                            <div class="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-start gap-2 fade-enter">
+                                                <span class="text-base">🔋</span>
+                                                <p>Энергия на нуле. Сделай Главный фокус, а рутину можно отложить на завтра.</p>
+                                            </div>
+                                        </template>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <template x-for="task in tasks.filter(t => t.type === 'routine')" :key="task.id">
+                                                <!-- ПРИГЛУШЕНИЕ РУТИНЫ ПРИ УСТАЛОСТИ -->
+                                                <div class="group flex items-center justify-between p-4 bg-slate-900/50 border border-slate-800/60 rounded-2xl hover:border-slate-700 hover:bg-slate-900 transition-all duration-300"
+                                                     :class="energy === '🔋 Устал' ? 'opacity-60 hover:opacity-100' : ''">
+                                                    <label class="flex items-center space-x-3 cursor-pointer flex-grow min-w-0">
+                                                        <div class="relative flex items-center justify-center w-5 h-5 rounded border border-slate-600 bg-slate-950/50 group-hover:border-emerald-500 transition-all flex-shrink-0" :class="task.done ? 'border-emerald-500 bg-emerald-500/20' : ''">
+                                                            <input type="checkbox" @change="toggleTask(task)" x-model="task.done" class="opacity-0 absolute w-full h-full cursor-pointer">
+                                                            <span x-show="task.done" class="text-emerald-400 text-[10px]">✓</span>
+                                                        </div>
+                                                        <span :class="task.done ? 'line-through text-slate-500' : 'text-slate-300'" class="text-sm transition-all break-words font-medium" x-text="task.name"></span>
+                                                    </label>
+                                                    <button @click="deleteTask(task)" class="text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all p-1.5 flex-shrink-0 bg-slate-950/50 rounded-lg border border-slate-800/50 hover:border-rose-500/30">🗑️</button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <template x-if="tasks.filter(t => t.type === 'routine').length === 0">
+                                            <div class="text-center py-8 bg-slate-900/30 rounded-2xl border border-dashed border-slate-800/60">
+                                                <p class="text-xs text-slate-500 font-medium">Список рутины пуст. Можно отдохнуть! ☕</p>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                        <!-- ================= ВКЛАДКА 3: БЮДЖЕТ ================= -->
+                        <div x-show="currentTab === 'finances'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start fade-enter">
+
+                            <!-- Левая колонка: Ввод и настройки -->
+                            <div class="space-y-6 w-full">
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl space-y-5">
+                                    <div class="flex justify-between items-start gap-2">
+                                        <div class="space-y-1.5">
+                                            <span class="text-[9px] bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Аналитика</span>
+                                            <h4 class="text-xs font-bold text-slate-100 uppercase tracking-widest mt-2">Месячный план</h4>
+                                        </div>
+                                        <span class="text-sm font-bold text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800 break-all text-right" x-text="formatMoney(monthlySpentTotal) + ' / ' + formatMoney(budget.monthly)"></span>
+                                    </div>
+                                    <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 shadow-inner">
+                                        <div class="bg-gradient-to-r from-teal-500 to-emerald-400 h-full transition-all duration-700 ease-out" :style="'width: ' + Math.min((monthlySpentTotal / budget.monthly * 100), 100) + '%'"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/40">
+                                        <span class="font-medium uppercase tracking-wider text-[10px]">Остаток на месяц:</span>
+                                        <span class="font-extrabold text-emerald-400 text-sm break-all text-right" x-text="formatMoney(budget.monthly - monthlySpentTotal)"></span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 rounded-3xl space-y-5">
+                                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">💸 Добавить расход</h4>
+                                    <div class="flex flex-col gap-3">
+                                        <div class="relative">
+                                            <input type="number" x-model="newFinanceAmount" @keydown.enter="addDetailedExpense()" placeholder="Сумма в ₽..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">₽</span>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <div class="relative flex-grow">
+                                                <select x-model="newFinanceCategory" class="w-full text-sm bg-slate-800 border border-slate-700 rounded-xl p-3.5 text-slate-200 focus:outline-none cursor-pointer font-medium appearance-none pr-8">
+                                                    <template x-for="cat in categories" :key="cat.id">
+                                                        <option class="bg-slate-900 text-slate-200" :value="cat.name" x-text="cat.name"></option>
+                                                    </template>
+                                                </select>
+                                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                                </div>
+                                            </div>
+                                            <button @click="addDetailedExpense()" class="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-black font-bold text-sm px-6 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5">Внести</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Правая колонка: Статистика и История -->
+                            <div class="space-y-6 w-full">
+                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 rounded-3xl space-y-5">
+                                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span>📊 Распределение</span></h4>
+                                    <div class="space-y-3">
+                                        <template x-for="cat in categories" :key="cat.id">
+                                            <div class="space-y-2 bg-slate-950/30 p-3 rounded-xl border border-slate-800/40 hover:border-slate-700 transition-all">
+                                                <div class="flex justify-between text-sm gap-2">
+                                                    <span class="text-slate-300 font-medium flex-shrink-0" x-text="cat.name"></span>
+                                                    <span class="font-bold text-slate-200 break-all text-right" x-text="formatMoney(transactionsSummary[cat.name])"></span>
+                                                </div>
+                                                <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/50"><div class="bg-gradient-to-r from-teal-500/80 to-teal-400 h-full" :style="'width: ' + (monthlySpentTotal ? Math.min(((transactionsSummary[cat.name] || 0) / monthlySpentTotal * 100), 100) : 0) + '%'"></div></div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4 bg-slate-900/20 border border-slate-800/40 p-6 rounded-3xl">
+                                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">🕰 История операций</h4>
+                                    <div class="space-y-2.5">
+                                        <template x-for="tx in transactions.slice(0, 8)" :key="tx.id">
+                                            <div class="group flex justify-between items-center p-4 bg-slate-900/50 border border-slate-800/60 rounded-2xl gap-2 hover:border-slate-700 hover:bg-slate-900 transition-all duration-300">
+                                                <div class="min-w-0 flex-1">
+                                                    <span class="text-sm font-semibold text-slate-200 truncate block" x-text="tx.category"></span>
+                                                    <p class="text-[10px] text-slate-500 mt-0.5">Успешная транзакция</p>
+                                                </div>
+                                                <div class="flex items-center gap-3">
+                                                    <span class="text-sm font-bold text-rose-400 flex-shrink-0 break-all text-right bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20" x-text="'- ' + formatMoney(tx.amount)"></span>
+                                                    <button @click="deleteTransaction(tx.id)" class="text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all p-1.5 bg-slate-950/50 rounded-lg border border-slate-800/50 hover:border-rose-500/30">🗑️</button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template x-if="transactions.length === 0">
+                                            <div class="text-center py-6 bg-slate-900/30 rounded-2xl border border-dashed border-slate-800/60">
+                                                <p class="text-xs text-slate-500 font-medium">Финансовых операций пока нет.</p>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ================= ВКЛАДКА 4: ПРИВЫЧКИ ================= -->
+                        <div x-show="currentTab === 'habits'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start fade-enter">
+
+                            <!-- Левая колонка: Управление привычками (4 колонки) -->
+                            <div class="lg:col-span-5 xl:col-span-4 space-y-6 w-full">
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl space-y-5">
+                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                        <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">🌱</span>
+                                        <span>Мои привычки</span>
+                                    </h3>
+
+                                    <div class="space-y-3">
+                                        <template x-for="habit in habits" :key="habit.id">
+                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-[inset_0_0_15px_rgba(16,185,129,0.05)]' : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:bg-slate-900'" class="w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all duration-300 group">
+                                                <span class="text-sm font-semibold truncate pr-2 group-hover:text-slate-100 transition-all" :class="habit.done ? 'text-emerald-400' : ''" x-text="habit.name"></span>
+                                                <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0" :class="habit.done ? 'border-emerald-500 bg-emerald-500/20' : 'border-slate-600 group-hover:border-emerald-500/50'">
+                                                    <span x-show="habit.done" class="text-emerald-400 text-xs font-bold">✓</span>
+                                                </div>
+                                            </button>
+                                        </template>
+                                        <template x-if="habits.length === 0">
+                                            <div class="text-center py-8 bg-slate-900/30 rounded-2xl border border-dashed border-slate-800/60">
+                                                <p class="text-xs text-slate-500 font-medium">Список привычек пуст. Добавьте их в настройках!</p>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Правая колонка: Теплокарта (8 колонок) -->
+                            <div class="lg:col-span-7 xl:col-span-8 space-y-6 w-full">
+                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 md:p-8 rounded-3xl space-y-6">
+                                    <div class="flex justify-between items-center border-b border-slate-800/50 pb-5">
+                                        <div>
+                                            <h3 class="font-serif text-2xl text-slate-100">Трекер активности</h3>
+                                            <span class="text-sm font-bold text-emerald-400 capitalize mt-1 block" x-text="calMonthName"></span>
+                                        </div>
+                                        <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-full font-bold shadow-sm uppercase tracking-wider hidden sm:block">Осознанный месяц</span>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-3 sm:gap-4 text-center">
+                                        <template x-for="dayName in ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']"><span class="text-[10px] text-slate-500 font-bold uppercase" x-text="dayName"></span></template>
+                                        <template x-for="i in calEmptyDays"><div class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14"></div></template>
+                                        <template x-for="day in calDaysInMonth" :key="day">
+                                            <div class="relative group flex justify-center">
+                                                <div :class="{
+                                                    'bg-slate-950/40 border-slate-800/60 text-slate-600': (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) === 0,
+                                                    'bg-emerald-900/40 border-emerald-800/50 text-emerald-500/70': (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) > 0 && (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) <= 25,
+                                                    'bg-emerald-700/50 border-emerald-600/50 text-emerald-400 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]': (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) > 25 && (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) <= 50,
+                                                    'bg-emerald-500/70 border-emerald-400/60 text-emerald-100 shadow-[inset_0_0_15px_rgba(16,185,129,0.2)]': (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) > 50 && (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) <= 75,
+                                                    'bg-emerald-400 text-slate-900 font-bold shadow-[0_0_15px_rgba(52,211,153,0.5)] border-transparent scale-105': (habitsStats[calYearMonth + '-' + String(day).padStart(2, '0')] || 0) > 75
+                                                }" class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl border flex items-center justify-center text-sm font-bold cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-lg">
+                                                    <span x-text="day"></span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div class="flex items-center justify-between border-t border-slate-800/40 pt-5 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                                        <span>Меньше</span>
+                                        <div class="flex items-center space-x-2.5">
+                                            <div class="w-4 h-4 rounded-md bg-slate-950/40 border border-slate-800/60"></div>
+                                            <div class="w-4 h-4 rounded-md bg-emerald-900/40 border border-emerald-800/50"></div>
+                                            <div class="w-4 h-4 rounded-md bg-emerald-700/50 border border-emerald-600/50"></div>
+                                            <div class="w-4 h-4 rounded-md bg-emerald-500/70 border border-emerald-400/60"></div>
+                                            <div class="w-4 h-4 rounded-md bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.4)]"></div>
+                                        </div>
+                                        <span>Больше</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ================= ВКЛАДКА 5: НАСТРОЙКИ ================= -->
+                        <div x-show="currentTab === 'settings'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start fade-enter">
+
+                            <!-- Профиль -->
+                            <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">👤</span>
+                                    <span>Профиль</span>
+                               </h3>
+                                <div class="space-y-4 pt-2">
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">Ваше имя</label>
+                                        <input type="text" x-model="editUserName" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                    </div>
+                                    <button @click="saveProfile($event)" class="w-full bg-slate-800 hover:bg-emerald-500 hover:text-black text-slate-300 font-bold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]">Сохранить изменения профиля</button>
+                                </div>
+                            </div>
+
+                            <!-- Настройки бюджета -->
+                            <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">⚙️</span>
+                                    <span>Лимиты бюджета</span>
+                                </h3>
+                                <div class="space-y-4 pt-2">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">На месяц (₽)</label>
+                                            <input type="number" x-model.number="editMonthlyBudget" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">В день (₽)</label>
+                                            <input type="number" x-model.number="editDailyLimit" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                        </div>
+
+                                        <!-- УМНЫЕ ПОДСКАЗКИ ДЛЯ ЛИМИТА -->
+                                        <div class="col-span-2 mt-1" x-show="editMonthlyBudget > 0" x-transition>
+                                            <p class="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-semibold">Умные подсказки для лимита:</p>
+                                            <div class="grid grid-cols-3 gap-2">
+                                                <button @click="editDailyLimit = Math.round(editMonthlyBudget / 30)" class="flex flex-col items-start bg-slate-950/40 hover:bg-emerald-500/10 border border-slate-800/60 hover:border-emerald-500/30 p-2.5 rounded-xl transition-all text-left group">
+                                                    <span class="text-[9px] text-slate-400 group-hover:text-emerald-400 transition-all">Строгий (÷30)</span>
+                                                    <span class="text-xs font-bold text-slate-200 group-hover:text-emerald-300 transition-all mt-0.5" x-text="formatMoney(Math.round(editMonthlyBudget / 30))"></span>
+                                                </button>
+                                                <button @click="editDailyLimit = Math.round(editMonthlyBudget / 40)" class="flex flex-col items-start bg-slate-950/40 hover:bg-emerald-500/10 border border-slate-800/60 hover:border-emerald-500/30 p-2.5 rounded-xl transition-all text-left group">
+                                                    <span class="text-[9px] text-slate-400 group-hover:text-emerald-400 transition-all">С запасом (÷40)</span>
+                                                    <span class="text-xs font-bold text-slate-200 group-hover:text-emerald-300 transition-all mt-0.5" x-text="formatMoney(Math.round(editMonthlyBudget / 40))"></span>
+                                                </button>
+                                                <button @click="editDailyLimit = Math.round(editMonthlyBudget / 20)" class="flex flex-col items-start bg-slate-950/40 hover:bg-emerald-500/10 border border-slate-800/60 hover:border-emerald-500/30 p-2.5 rounded-xl transition-all text-left group">
+                                                    <span class="text-[9px] text-slate-400 group-hover:text-emerald-400 transition-all">Свободный (÷20)</span>
+                                                    <span class="text-xs font-bold text-slate-200 group-hover:text-emerald-300 transition-all mt-0.5" x-text="formatMoney(Math.round(editMonthlyBudget / 20))"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button @click="saveBudget($event)" class="w-full bg-slate-800 hover:bg-emerald-500 hover:text-black text-slate-300 font-bold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]">Обновить лимиты</button>
+                                </div>
+                            </div>
+
+                            <!-- Категории -->
+                            <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">📁</span>
+                                    <span>Категории расходов</span>
+                                </h3>
+                                <div class="space-y-2.5 pt-2">
+                                    <template x-for="cat in categories" :key="cat.id">
+                                        <div class="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-xl border border-slate-800/60 hover:border-slate-700 transition-all">
+                                            <span class="text-sm font-medium text-slate-300" x-text="cat.name"></span>
+                                            <button @click="deleteCategory(cat.id)" class="text-slate-600 hover:text-rose-400 px-2 transition-all p-1.5 bg-slate-950/50 rounded-lg border border-slate-800/50 hover:border-rose-500/30">🗑️</button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="flex gap-2 pt-3 border-t border-slate-800/50">
+                                    <input type="text" x-model="newCategoryName" @keydown.enter="addCategory()" placeholder="Новая (напр. 🍕 Еда)" class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                    <button @click="addCategory()" class="bg-slate-800 hover:bg-emerald-500 text-slate-300 hover:text-black font-bold text-xl px-5 rounded-xl transition-all duration-300">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Привычки (Редактирование) -->
+                            <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">📝</span>
+                                    <span>Редактор привычек</span>
+                                </h3>
+                                <div class="space-y-2.5 pt-2">
+                                    <template x-for="habit in habits" :key="habit.id">
+                                        <div class="flex items-center gap-2 bg-slate-950/40 p-2 rounded-xl border border-slate-800/60 focus-within:border-emerald-500/50 transition-all">
+                                            <input type="text" x-model="habit.name" @change="updateHabitName(habit)" class="flex-grow bg-transparent border-none text-sm font-medium text-slate-300 p-1.5 focus:outline-none">
+                                            <button @click="deleteHabit(habit.id)" class="text-slate-600 hover:text-rose-400 px-3 transition-all p-1.5 bg-slate-950/50 rounded-lg border border-slate-800/50 hover:border-rose-500/30">🗑️</button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="flex gap-2 pt-3 border-t border-slate-800/50">
+                                    <input type="text" x-model="newHabitName" @keydown.enter="addHabit()" placeholder="Новая привычка..." class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                    <button @click="addHabit()" class="bg-slate-800 hover:bg-emerald-500 text-slate-300 hover:text-black font-bold text-xl px-5 rounded-xl transition-all duration-300">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Кнопка Выхода -->
+                            <div class="lg:col-span-2 pt-4 pb-12">
+                                <button @click="logout()" class="w-full md:w-auto md:px-12 mx-auto flex justify-center items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 font-bold text-sm py-4 rounded-2xl transition-all duration-300 hover:shadow-[0_0_15px_rgba(244,63,94,0.15)] transform hover:-translate-y-0.5">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                    Выйти из аккаунта
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
+
+                <!-- МОБИЛЬНАЯ НАВИГАЦИЯ -->
+                <nav class="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-[#0B0F19]/90 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-4 z-20">
+                    <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">🏡</span><span class="text-[9px] tracking-wide">Главная</span></button>
+                    <button @click="currentTab = 'tasks'" :class="currentTab === 'tasks' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">📅</span><span class="text-[9px] tracking-wide">Планер</span></button>
+                    <button @click="currentTab = 'finances'" :class="currentTab === 'finances' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">💸</span><span class="text-[9px] tracking-wide">Бюджет</span></button>
+                    <button @click="currentTab = 'habits'" :class="currentTab === 'habits' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">🌱</span><span class="text-[9px] tracking-wide">Привычки</span></button>
+                </nav>
+            </div>
+        </template>
+    </div>
+</body>
+</html>
