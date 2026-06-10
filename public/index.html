@@ -30,7 +30,7 @@
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
     </style>
 </head>
-<body class="bg-[#0B0F19] text-slate-100 font-sans h-screen h-[100dvh] w-full selection:bg-teal-500 selection:text-black">
+<body class="bg-[#0B0F19] text-slate-100 font-sans h-screen h-[100dvh] w-full selection:bg-teal-500 selection:text-black overflow-hidden relative">
 
     <div x-data="{
         currentTab: 'dashboard',
@@ -376,7 +376,7 @@
             const res = await fetch(`/api/tasks/${task.id}?delete_series=${deleteSeries}`, { method: 'DELETE', headers: this.getHeaders() });
             if (res.ok) { this.loadTasks(); }
         }
-    }" class="flex w-full h-full h-[100dvh]">
+    }" class="flex w-full h-full h-[100dvh] overflow-hidden">
 
         <!-- ЭКРАН ВХОДА -->
         <template x-if="!token">
@@ -390,15 +390,15 @@
                     <div class="bg-slate-900/60 border border-slate-800/60 p-8 rounded-3xl space-y-5 shadow-2xl backdrop-blur-sm">
                         <div class="space-y-1.5" x-show="isRegisterMode">
                             <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Ваше имя</label>
-                            <input type="text" x-model="authName" placeholder="Алексей" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                            <input type="text" x-model="authName" placeholder="Алексей" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
                         </div>
                         <div class="space-y-1.5">
                             <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Email</label>
-                            <input type="email" x-model="authEmail" placeholder="your@email.com" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                            <input type="email" x-model="authEmail" placeholder="your@email.com" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
                         </div>
                         <div class="space-y-1.5">
                             <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Пароль</label>
-                            <input type="password" x-model="authPassword" placeholder="••••••••" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                            <input type="password" x-model="authPassword" placeholder="••••••••" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
                         </div>
                         <template x-if="authError"><p class="text-xs text-rose-400 text-center font-medium bg-rose-500/10 py-2 rounded-xl border border-rose-500/20" x-text="authError"></p></template>
                         <button @click="handleAuth()" class="w-full bg-emerald-500 hover:bg-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] text-black font-semibold text-sm py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5" x-text="isRegisterMode ? 'Создать аккаунт' : 'Войти в кабинет'"></button>
@@ -491,7 +491,7 @@
                         <div class="max-w-[1440px] mx-auto w-full">
 
                             <!-- ================= ВКЛАДКА 1: ДАШБОРД ================= -->
-                            <div x-show="currentTab === 'dashboard'" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start fade-enter">
+                            <div x-show="currentTab === 'dashboard'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start fade-enter">
 
                                 <!-- Приветствие -->
                                 <div class="col-span-full mb-2">
@@ -515,7 +515,7 @@
                                 </div>
 
                                 <!-- КОЛОНКА 1: Главный фокус дня -->
-                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl flex flex-col w-full">
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-[2rem] flex flex-col w-full">
                                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">🎯 Главный фокус дня</h3>
                                     <div class="flex-1 flex flex-col justify-center">
                                         <template x-for="task in tasks.filter(t => t.type === 'focus')" :key="task.id">
@@ -538,7 +538,7 @@
                                 </div>
 
                                 <!-- КОЛОНКА 2: Виджет привычек -->
-                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl flex flex-col w-full">
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-[2rem] flex flex-col w-full">
                                     <div class="flex justify-between items-start mb-5">
                                         <div class="space-y-1">
                                             <span class="text-[9px] bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Дофаминовый трекер</span>
@@ -574,7 +574,7 @@
                                 </div>
 
                                 <!-- КОЛОНКА 3: Виджет финансов -->
-                                <div class="bg-gradient-to-br from-slate-900 to-[#1e293b]/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl flex flex-col justify-between w-full">
+                                <div class="bg-gradient-to-br from-slate-900 to-[#1e293b]/40 border border-slate-800/80 shadow-lg p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-[2rem] flex flex-col justify-between w-full">
                                     <div>
                                         <div class="flex justify-between items-start gap-2 mb-4">
                                             <div class="min-w-0">
@@ -595,11 +595,11 @@
                             </div>
 
                             <!-- ================= ВКЛАДКА 2: ПЛАНИРОВАНИЕ ================= -->
-                            <div x-show="currentTab === 'tasks'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start fade-enter" x-init="$watch('currentTab', val => { if(val === 'tasks') scrollToSelectedDate() })">
+                            <div x-show="currentTab === 'tasks'" class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start fade-enter" x-init="$watch('currentTab', val => { if(val === 'tasks') scrollToSelectedDate() })">
 
-                                <!-- Левая колонка: Календарь и Добавление (4 колонки на ПК) -->
-                                <div class="lg:col-span-5 xl:col-span-4 space-y-6 w-full">
-                                    <div class="bg-slate-900/40 border border-slate-800/60 p-6 rounded-3xl space-y-5 shadow-lg">
+                                <!-- Левая колонка: Календарь и Добавление (5 колонок на планшетах, 4 на ПК) -->
+                                <div class="md:col-span-5 lg:col-span-5 xl:col-span-4 space-y-6 w-full">
+                                    <div class="bg-slate-900/40 border border-slate-800/60 p-5 md:p-6 rounded-3xl space-y-5 shadow-lg">
                                         <div class="flex justify-between items-start">
                                             <div>
                                                 <div class="flex items-center gap-2">
@@ -685,9 +685,9 @@
                                     </div>
                                 </div>
 
-                                <!-- Правая колонка: Списки задач (8 колонок на ПК) -->
-                                <div class="lg:col-span-7 xl:col-span-8 space-y-6 w-full">
-                                    <div class="bg-slate-900/20 border border-slate-800/40 p-6 rounded-3xl">
+                                <!-- Правая колонка: Списки задач (7 колонок на планшетах, 8 на ПК) -->
+                                <div class="md:col-span-7 lg:col-span-7 xl:col-span-8 space-y-6 w-full">
+                                    <div class="bg-slate-900/20 border border-slate-800/40 p-5 md:p-6 rounded-3xl">
                                         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                                             <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">🎯</span>
                                             <span>Главный фокус</span>
@@ -695,7 +695,7 @@
                                         </h4>
                                         <div class="space-y-3">
                                             <template x-for="task in tasks.filter(t => t.type === 'focus')" :key="task.id">
-                                                <div class="group flex items-center justify-between p-5 bg-gradient-to-r from-slate-900/80 to-slate-900/40 border border-slate-800/60 rounded-2xl hover:border-emerald-500/40 transition-all duration-300 hover:shadow-md">
+                                                <div class="group flex items-center justify-between p-4 bg-gradient-to-r from-slate-900/80 to-slate-900/40 border border-slate-800/60 rounded-2xl hover:border-emerald-500/40 transition-all duration-300 hover:shadow-md">
                                                     <label class="flex items-center space-x-4 cursor-pointer flex-grow min-w-0">
                                                         <div class="relative flex items-center justify-center w-6 h-6 rounded-full border-2 border-slate-600 bg-slate-950/50 group-hover:border-emerald-500 transition-all flex-shrink-0" :class="task.done ? 'border-emerald-500 bg-emerald-500/20' : ''">
                                                             <input type="checkbox" @change="toggleTask(task)" x-model="task.done" class="opacity-0 absolute w-full h-full cursor-pointer">
@@ -715,7 +715,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="bg-slate-900/20 border border-slate-800/40 p-6 rounded-3xl">
+                                    <div class="bg-slate-900/20 border border-slate-800/40 p-5 md:p-6 rounded-3xl">
                                         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                                             <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">📝</span>
                                             <span>Текущая рутина</span>
@@ -756,11 +756,11 @@
                             </div>
 
                         <!-- ================= ВКЛАДКА 3: БЮДЖЕТ ================= -->
-                        <div x-show="currentTab === 'finances'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start fade-enter">
+                        <div x-show="currentTab === 'finances'" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start fade-enter">
 
                             <!-- Левая колонка: Ввод и настройки -->
                             <div class="space-y-6 w-full">
-                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl space-y-5">
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 md:p-6 rounded-3xl space-y-5">
                                     <div class="flex justify-between items-start gap-2">
                                         <div class="space-y-1.5">
                                             <span class="text-[9px] bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Аналитика</span>
@@ -777,7 +777,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 rounded-3xl space-y-5">
+                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-5 md:p-6 rounded-3xl space-y-5">
                                     <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">💸 Добавить расход</h4>
                                     <div class="flex flex-col gap-3">
                                         <div class="relative">
@@ -803,7 +803,7 @@
 
                             <!-- Правая колонка: Статистика и История -->
                             <div class="space-y-6 w-full">
-                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 rounded-3xl space-y-5">
+                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-5 md:p-6 rounded-3xl space-y-5">
                                     <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span>📊 Распределение</span></h4>
                                     <div class="space-y-3">
                                         <template x-for="cat in categories" :key="cat.id">
@@ -818,7 +818,7 @@
                                     </div>
                                 </div>
 
-                                <div class="space-y-4 bg-slate-900/20 border border-slate-800/40 p-6 rounded-3xl">
+                                <div class="space-y-4 bg-slate-900/20 border border-slate-800/40 p-5 md:p-6 rounded-3xl">
                                     <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">🕰 История операций</h4>
                                     <div class="space-y-2.5">
                                         <template x-for="tx in transactions.slice(0, 8)" :key="tx.id">
@@ -844,11 +844,11 @@
                         </div>
 
                         <!-- ================= ВКЛАДКА 4: ПРИВЫЧКИ ================= -->
-                        <div x-show="currentTab === 'habits'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start fade-enter">
+                        <div x-show="currentTab === 'habits'" class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start fade-enter">
 
                             <!-- Левая колонка: Управление привычками (4 колонки) -->
-                            <div class="lg:col-span-5 xl:col-span-4 space-y-6 w-full">
-                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 rounded-3xl space-y-5">
+                            <div class="md:col-span-5 lg:col-span-5 xl:col-span-4 space-y-6 w-full">
+                                <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 md:p-6 rounded-3xl space-y-5">
                                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                         <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">🌱</span>
                                         <span>Мои привычки</span>
@@ -873,8 +873,8 @@
                             </div>
 
                             <!-- Правая колонка: Теплокарта (8 колонок) -->
-                            <div class="lg:col-span-7 xl:col-span-8 space-y-6 w-full">
-                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 md:p-8 rounded-3xl space-y-6">
+                            <div class="md:col-span-7 lg:col-span-7 xl:col-span-8 space-y-6 w-full">
+                                <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-5 md:p-6 lg:p-8 rounded-3xl space-y-6">
                                     <div class="flex justify-between items-center border-b border-slate-800/50 pb-5">
                                         <div>
                                             <h3 class="font-serif text-2xl text-slate-100">Трекер активности</h3>
@@ -915,10 +915,17 @@
                         </div>
 
                         <!-- ================= ВКЛАДКА 5: НАСТРОЙКИ ================= -->
-                        <div x-show="currentTab === 'settings'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start fade-enter">
+                        <div x-show="currentTab === 'settings'" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start fade-enter">
+
+                            <!-- МОБИЛЬНАЯ КНОПКА НАЗАД (Решает навигационный тупик на телефонах) -->
+                            <div class="md:hidden col-span-full">
+                                <button @click="currentTab = 'dashboard'" class="inline-flex items-center space-x-2 text-sm text-emerald-400 hover:text-emerald-300 font-semibold bg-slate-900/60 px-4 py-3 rounded-xl border border-slate-800/80 transition-all w-full justify-center">
+                                    <span>←</span><span>Назад на главную</span>
+                                </button>
+                            </div>
 
                             <!-- Профиль -->
-                            <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                            <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 md:p-6 lg:p-8 rounded-3xl space-y-5">
                                 <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                     <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">👤</span>
                                     <span>Профиль</span>
@@ -933,7 +940,7 @@
                             </div>
 
                             <!-- Настройки бюджета -->
-                            <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                            <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 md:p-6 lg:p-8 rounded-3xl space-y-5">
                                 <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                     <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">⚙️</span>
                                     <span>Лимиты бюджета</span>
@@ -942,11 +949,11 @@
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">На месяц (₽)</label>
-                                            <input type="number" x-model.number="editMonthlyBudget" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <input type="number" x-model.number="editMonthlyBudget" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                         </div>
                                         <div>
                                             <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">В день (₽)</label>
-                                            <input type="number" x-model.number="editDailyLimit" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <input type="number" x-model.number="editDailyLimit" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                         </div>
 
                                         <!-- УМНЫЕ ПОДСКАЗКИ ДЛЯ ЛИМИТА -->
@@ -973,7 +980,7 @@
                             </div>
 
                             <!-- Категории -->
-                            <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                            <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-5 md:p-6 rounded-3xl space-y-5">
                                 <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                     <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">📁</span>
                                     <span>Категории расходов</span>
@@ -987,13 +994,13 @@
                                     </template>
                                 </div>
                                 <div class="flex gap-2 pt-3 border-t border-slate-800/50">
-                                    <input type="text" x-model="newCategoryName" @keydown.enter="addCategory()" placeholder="Новая (напр. 🍕 Еда)" class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                    <input type="text" x-model="newCategoryName" @keydown.enter="addCategory()" placeholder="Новая (напр. 🍕 Еда)" class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                     <button @click="addCategory()" class="bg-slate-800 hover:bg-emerald-500 text-slate-300 hover:text-black font-bold text-xl px-5 rounded-xl transition-all duration-300">+</button>
                                 </div>
                             </div>
 
                             <!-- Привычки (Редактирование) -->
-                            <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-6 md:p-8 rounded-3xl space-y-5">
+                            <div class="bg-slate-900/40 border border-slate-800/60 shadow-lg p-5 md:p-6 rounded-3xl space-y-5">
                                 <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                     <span class="bg-slate-800/80 p-1.5 rounded-lg text-lg">📝</span>
                                     <span>Редактор привычек</span>
@@ -1025,7 +1032,7 @@
                 </main>
 
                 <!-- МОБИЛЬНАЯ НАВИГАЦИЯ -->
-                <nav class="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-[#0B0F19]/90 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-4 z-20">
+                <nav class="md:hidden fixed bottom-0 left-0 right-0 h-20 pb-[env(safe-area-inset-bottom)] bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-4 z-40">
                     <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">🏡</span><span class="text-[9px] tracking-wide">Главная</span></button>
                     <button @click="currentTab = 'tasks'" :class="currentTab === 'tasks' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">📅</span><span class="text-[9px] tracking-wide">Планер</span></button>
                     <button @click="currentTab = 'finances'" :class="currentTab === 'finances' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">💸</span><span class="text-[9px] tracking-wide">Бюджет</span></button>
