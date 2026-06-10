@@ -26,4 +26,8 @@ app.include_router(tasks.router)
 # Раздача фронтенда (всегда в самом конце!)
 script_dir = os.path.dirname(__file__)
 public_dir = os.path.join(script_dir, "public")
-app.mount("/", StaticFiles(directory=public_dir, html=True), name="public")
+
+# Если папка существует (на локальном ПК), монтируем её.
+# Если папки нет (на Vercel), просто пропускаем и не падаем с ошибкой!
+if os.path.exists(public_dir):
+    app.mount("/", StaticFiles(directory=public_dir, html=True), name="public")
