@@ -30,7 +30,7 @@
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
     </style>
 </head>
-<body class="bg-[#0B0F19] text-slate-100 font-sans h-screen w-full selection:bg-teal-500 selection:text-black">
+<body class="bg-[#0B0F19] text-slate-100 font-sans h-screen h-[100dvh] w-full selection:bg-teal-500 selection:text-black">
 
     <div x-data="{
         currentTab: 'dashboard',
@@ -376,7 +376,7 @@
             const res = await fetch(`/api/tasks/${task.id}?delete_series=${deleteSeries}`, { method: 'DELETE', headers: this.getHeaders() });
             if (res.ok) { this.loadTasks(); }
         }
-    }" class="flex w-full h-full">
+    }" class="flex w-full h-full h-[100dvh]">
 
         <!-- ЭКРАН ВХОДА -->
         <template x-if="!token">
@@ -412,7 +412,7 @@
 
         <!-- ГЛАВНЫЙ ИНТЕРФЕЙС -->
         <template x-if="token">
-            <div class="flex w-full h-full fade-enter">
+            <div class="flex w-full h-full h-[100dvh] overflow-hidden">
 
                 <!-- БОКОВАЯ ПАНЕЛЬ (ДЛЯ ПК) -->
                 <aside class="hidden md:flex flex-col w-64 bg-[#0B0F19] border-r border-slate-800/60 h-full flex-shrink-0 z-30 transition-all duration-300">
@@ -448,16 +448,26 @@
                 </aside>
 
                 <!-- ОСНОВНАЯ ОБЛАСТЬ -->
-                <div class="flex-1 flex flex-col h-full relative overflow-hidden bg-[#0B0F19]">
+                <div class="flex-1 flex flex-col h-full h-[100dvh] relative overflow-hidden bg-[#0B0F19]">
 
                     <!-- Мобильная шапка -->
                     <header class="md:hidden p-5 flex justify-between items-center bg-[#0B0F19]/90 backdrop-blur-md border-b border-slate-800/40 z-20">
                         <div>
-                            <h1 class="font-serif text-lg text-emerald-400 italic">Баланс</h1>
+                            <!-- КЛИКАБЕЛЬНЫЙ ЛОГОТИП НА МОБИЛКЕ -->
+                            <button @click="currentTab = 'dashboard'" class="font-serif text-xl text-emerald-400 italic font-semibold focus:outline-none">
+                                Баланс
+                            </button>
                         </div>
                         <div class="flex items-center space-x-3">
                             <span class="text-[10px] bg-slate-800/80 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-medium" x-text="energy"></span>
-                            <button @click="currentTab = 'settings'" class="text-lg text-slate-500 hover:text-emerald-400 transition-all">⚙️</button>
+
+                            <!-- КНОПКА НАСТРОЕК (Починен клик, увеличен тач-таргет, SVG вместо эмодзи) -->
+                            <button @click="currentTab = 'settings'" class="text-slate-400 hover:text-emerald-400 transition-all p-2.5 -mr-2.5 flex items-center justify-center focus:outline-none" aria-label="Настройки">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </button>
                         </div>
                     </header>
 
@@ -553,7 +563,7 @@
 
                                     <div class="flex-1 space-y-2.5">
                                         <template x-for="habit in habits" :key="habit.id">
-                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:border-slate-700'" class="w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all duration-300">
+                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-950/40 border-slate-800/80 text-slate-400 hover:border-slate-700'" class="w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all duration-300">
                                                 <span class="text-sm font-medium truncate pr-2" x-text="habit.name"></span>
                                                 <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all" :class="habit.done ? 'border-emerald-500 bg-emerald-500/20' : 'border-slate-700'">
                                                     <span x-show="habit.done" class="text-emerald-400 text-[10px]">✓</span>
@@ -576,7 +586,7 @@
                                     </div>
                                     <div class="flex flex-col gap-3 mt-4">
                                         <div class="relative">
-                                            <input type="number" x-model="newExpenseAmount" @keydown.enter="addExpense()" placeholder="Сумма трат..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <input type="number" x-model="newExpenseAmount" @keydown.enter="addExpense()" placeholder="Сумма расхода..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                             <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">₽</span>
                                         </div>
                                         <button @click="addExpense()" class="w-full bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-black font-bold text-sm px-5 py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5">Внести расход</button>
@@ -657,7 +667,7 @@
                                                 </select>
                                             </div>
 
-                                            <!-- ОБНОВЛЕННЫЙ ВЕРТИКАЛЬНЫЙ БЛОК ВЫБОРА ДАТ (Сетка вместо скролла) -->
+                                            <!-- ОБНОВЛЕННЫЙ ВЕРТИКАЛЬНЫЙ БЛОК ВЫБОРА ДАТ (Календарная сетка 7х вместо скролла) -->
                                             <div class="flex flex-col gap-2.5 pt-1" x-show="newTaskDuration > 1" x-transition>
                                                 <span class="text-[10px] xl:text-xs text-slate-400 uppercase tracking-widest font-semibold">Выберите дни для задачи:</span>
                                                 <div class="grid grid-cols-7 gap-1.5 w-full py-1">
@@ -846,7 +856,7 @@
 
                                     <div class="space-y-3">
                                         <template x-for="habit in habits" :key="habit.id">
-                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-[inset_0_0_15px_rgba(16,185,129,0.05)]' : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:bg-slate-900'" class="w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all duration-300 group">
+                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-[inset_0_0_15px_rgba(16,185,129,0.05)]' : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:border-slate-700'" class="w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all duration-300 group">
                                                 <span class="text-sm font-semibold truncate pr-2 group-hover:text-slate-100 transition-all" :class="habit.done ? 'text-emerald-400' : ''" x-text="habit.name"></span>
                                                 <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0" :class="habit.done ? 'border-emerald-500 bg-emerald-500/20' : 'border-slate-600 group-hover:border-emerald-500/50'">
                                                     <span x-show="habit.done" class="text-emerald-400 text-xs font-bold">✓</span>
