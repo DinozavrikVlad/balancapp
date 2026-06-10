@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Баланс — Осознанная продуктивность</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
@@ -22,12 +22,18 @@
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
         * { scrollbar-width: thin; scrollbar-color: #1E293B transparent; }
 
+        /* Убираем уродливую вспышку при клике на кнопках в iOS/Android */
+        * { -webkit-tap-highlight-color: transparent; }
+
         html, body { max-width: 100vw; overflow: hidden; }
         .fade-enter { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Стилизация селектов */
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+
+        /* Плавная прокрутка для мобильных */
+        main { -webkit-overflow-scrolling: touch; }
     </style>
 </head>
 <body class="bg-[#0B0F19] text-slate-100 font-sans h-screen h-[100dvh] w-full selection:bg-teal-500 selection:text-black overflow-hidden relative">
@@ -390,15 +396,16 @@
                     <div class="bg-slate-900/60 border border-slate-800/60 p-8 rounded-3xl space-y-5 shadow-2xl backdrop-blur-sm">
                         <div class="space-y-1.5" x-show="isRegisterMode">
                             <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Ваше имя</label>
-                            <input type="text" x-model="authName" placeholder="Алексей" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                            <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                            <input type="text" x-model="authName" placeholder="Алексей" class="w-full bg-slate-950/60 border border-slate-800 text-base rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
                         </div>
                         <div class="space-y-1.5">
                             <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Email</label>
-                            <input type="email" x-model="authEmail" placeholder="your@email.com" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                            <input type="email" x-model="authEmail" placeholder="your@email.com" class="w-full bg-slate-950/60 border border-slate-800 text-base rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
                         </div>
                         <div class="space-y-1.5">
                             <label class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Пароль</label>
-                            <input type="password" x-model="authPassword" placeholder="••••••••" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
+                            <input type="password" x-model="authPassword" placeholder="••••••••" class="w-full bg-slate-950/60 border border-slate-800 text-base rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
                         </div>
                         <template x-if="authError"><p class="text-xs text-rose-400 text-center font-medium bg-rose-500/10 py-2 rounded-xl border border-rose-500/20" x-text="authError"></p></template>
                         <button @click="handleAuth()" class="w-full bg-emerald-500 hover:bg-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] text-black font-semibold text-sm py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5" x-text="isRegisterMode ? 'Создать аккаунт' : 'Войти в кабинет'"></button>
@@ -423,16 +430,28 @@
 
                     <nav class="flex-1 px-4 py-6 space-y-2">
                         <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
-                            <span class="text-lg">🏡</span><span>Главная</span>
+                            <span class="mr-3 text-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            </span>
+                            <span>Главная</span>
                         </button>
                         <button @click="currentTab = 'tasks'" :class="currentTab === 'tasks' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
-                            <span class="text-lg">📅</span><span>Планер</span>
+                            <span class="mr-3 text-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </span>
+                            <span>Планер</span>
                         </button>
                         <button @click="currentTab = 'finances'" :class="currentTab === 'finances' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
-                            <span class="text-lg">💸</span><span>Бюджет</span>
+                            <span class="mr-3 text-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            </span>
+                            <span>Бюджет</span>
                         </button>
                         <button @click="currentTab = 'habits'" :class="currentTab === 'habits' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.05)]' : 'text-slate-400 hover:bg-slate-800/50 border-transparent'" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl border transition-all duration-300 text-sm font-medium">
-                            <span class="text-lg">🌱</span><span>Привычки</span>
+                            <span class="mr-3 text-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </span>
+                            <span>Привычки</span>
                         </button>
                     </nav>
 
@@ -486,8 +505,8 @@
                         </div>
                     </header>
 
-                    <!-- КОНТЕНТ ВКЛАДОК (Компактный контейнер) -->
-                    <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-8">
+                    <!-- КОНТЕНТ ВКЛАДОК (Компактный контейнер, увеличен отступ pb-36 для предотвращения наложения) -->
+                    <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-36 md:pb-12">
                         <div class="max-w-[1440px] mx-auto w-full">
 
                             <!-- ================= ВКЛАДКА 1: ДАШБОРД ================= -->
@@ -586,7 +605,8 @@
                                     </div>
                                     <div class="flex flex-col gap-3 mt-4">
                                         <div class="relative">
-                                            <input type="number" x-model="newExpenseAmount" @keydown.enter="addExpense()" placeholder="Сумма расхода..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                            <input type="number" x-model="newExpenseAmount" @keydown.enter="addExpense()" placeholder="Сумма расхода..." class="w-full bg-slate-950/60 border border-slate-800 text-base md:text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                             <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">₽</span>
                                         </div>
                                         <button @click="addExpense()" class="w-full bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-black font-bold text-sm px-5 py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5">Внести расход</button>
@@ -641,7 +661,8 @@
 
                                     <div class="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-slate-800/80 shadow-lg p-5 rounded-3xl flex flex-col gap-4 focus-within:border-emerald-500/50 transition-all">
                                         <div class="flex flex-col gap-3">
-                                            <input type="text" x-model="newTaskName" @keydown.enter="addTask()" placeholder="Выгрузить задачу..." class="w-full bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 p-3.5 shadow-inner">
+                                            <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                            <input type="text" x-model="newTaskName" @keydown.enter="addTask()" placeholder="Выгрузить задачу..." class="w-full bg-slate-950/60 border border-slate-800 rounded-xl text-base md:text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 p-3.5 shadow-inner">
                                             <div class="flex gap-2">
                                                 <div class="relative flex-grow">
                                                     <select x-model="newTaskType" class="w-full text-sm bg-slate-800 border border-slate-700 rounded-xl p-3.5 text-slate-200 focus:outline-none cursor-pointer font-medium appearance-none pr-8">
@@ -695,7 +716,7 @@
                                         </h4>
                                         <div class="space-y-3">
                                             <template x-for="task in tasks.filter(t => t.type === 'focus')" :key="task.id">
-                                                <div class="group flex items-center justify-between p-4 bg-gradient-to-r from-slate-900/80 to-slate-900/40 border border-slate-800/60 rounded-2xl hover:border-emerald-500/40 transition-all duration-300 hover:shadow-md">
+                                                <div class="group flex items-center justify-between p-5 bg-gradient-to-r from-slate-900/80 to-slate-900/40 border border-slate-800/60 rounded-2xl hover:border-emerald-500/40 transition-all duration-300 hover:shadow-md">
                                                     <label class="flex items-center space-x-4 cursor-pointer flex-grow min-w-0">
                                                         <div class="relative flex items-center justify-center w-6 h-6 rounded-full border-2 border-slate-600 bg-slate-950/50 group-hover:border-emerald-500 transition-all flex-shrink-0" :class="task.done ? 'border-emerald-500 bg-emerald-500/20' : ''">
                                                             <input type="checkbox" @change="toggleTask(task)" x-model="task.done" class="opacity-0 absolute w-full h-full cursor-pointer">
@@ -781,7 +802,8 @@
                                     <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">💸 Добавить расход</h4>
                                     <div class="flex flex-col gap-3">
                                         <div class="relative">
-                                            <input type="number" x-model="newFinanceAmount" @keydown.enter="addDetailedExpense()" placeholder="Сумма в ₽..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                            <input type="number" x-model="newFinanceAmount" @keydown.enter="addDetailedExpense()" placeholder="Сумма в ₽..." class="w-full bg-slate-950/60 border border-slate-800 text-base md:text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                             <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">₽</span>
                                         </div>
                                         <div class="flex gap-2">
@@ -933,7 +955,8 @@
                                 <div class="space-y-4 pt-2">
                                     <div>
                                         <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">Ваше имя</label>
-                                        <input type="text" x-model="editUserName" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                        <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                        <input type="text" x-model="editUserName" class="w-full bg-slate-950/60 border border-slate-800 text-base md:text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                     </div>
                                     <button @click="saveProfile($event)" class="w-full bg-slate-800 hover:bg-emerald-500 hover:text-black text-slate-300 font-bold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]">Сохранить изменения профиля</button>
                                 </div>
@@ -949,11 +972,13 @@
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">На месяц (₽)</label>
-                                            <input type="number" x-model.number="editMonthlyBudget" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                            <input type="number" x-model.number="editMonthlyBudget" class="w-full bg-slate-950/60 border border-slate-800 text-base md:text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                         </div>
                                         <div>
                                             <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">В день (₽)</label>
-                                            <input type="number" x-model.number="editDailyLimit" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                            <input type="number" x-model.number="editDailyLimit" class="w-full bg-slate-950/60 border border-slate-800 text-base md:text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                         </div>
 
                                         <!-- УМНЫЕ ПОДСКАЗКИ ДЛЯ ЛИМИТА -->
@@ -994,7 +1019,8 @@
                                     </template>
                                 </div>
                                 <div class="flex gap-2 pt-3 border-t border-slate-800/50">
-                                    <input type="text" x-model="newCategoryName" @keydown.enter="addCategory()" placeholder="Новая (напр. 🍕 Еда)" class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                    <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                    <input type="text" x-model="newCategoryName" @keydown.enter="addCategory()" placeholder="Новая (напр. 🍕 Еда)" class="flex-grow bg-slate-950/60 border border-slate-800 text-base md:text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                     <button @click="addCategory()" class="bg-slate-800 hover:bg-emerald-500 text-slate-300 hover:text-black font-bold text-xl px-5 rounded-xl transition-all duration-300">+</button>
                                 </div>
                             </div>
@@ -1008,13 +1034,15 @@
                                 <div class="space-y-2.5 pt-2">
                                     <template x-for="habit in habits" :key="habit.id">
                                         <div class="flex items-center gap-2 bg-slate-950/40 p-2 rounded-xl border border-slate-800/60 focus-within:border-emerald-500/50 transition-all">
-                                            <input type="text" x-model="habit.name" @change="updateHabitName(habit)" class="flex-grow bg-transparent border-none text-sm font-medium text-slate-300 p-1.5 focus:outline-none">
+                                            <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                            <input type="text" x-model="habit.name" @change="updateHabitName(habit)" class="flex-grow bg-transparent border-none text-base md:text-sm text-slate-300 p-1.5 focus:outline-none">
                                             <button @click="deleteHabit(habit.id)" class="text-slate-600 hover:text-rose-400 px-3 transition-all p-1.5 bg-slate-950/50 rounded-lg border border-slate-800/50 hover:border-rose-500/30">🗑️</button>
                                         </div>
                                     </template>
                                 </div>
                                 <div class="flex gap-2 pt-3 border-t border-slate-800/50">
-                                    <input type="text" x-model="newHabitName" @keydown.enter="addHabit()" placeholder="Новая привычка..." class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                    <!-- УВЕЛИЧЕН ШРИФТ ИНПУТА ДЛЯ ЗАЩИТЫ ОТ АВТО-ЗУМА SAFARI НА IOS (16px) -->
+                                    <input type="text" x-model="newHabitName" @keydown.enter="addHabit()" placeholder="Новая привычка..." class="flex-grow bg-slate-950/60 border border-slate-800 text-base md:text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                     <button @click="addHabit()" class="bg-slate-800 hover:bg-emerald-500 text-slate-300 hover:text-black font-bold text-xl px-5 rounded-xl transition-all duration-300">+</button>
                                 </div>
                             </div>
@@ -1031,12 +1059,32 @@
                     </div>
                 </main>
 
-                <!-- МОБИЛЬНАЯ НАВИГАЦИЯ -->
+                <!-- МОБИЛЬНАЯ НАВИГАЦИЯ (Переопределена z-index на z-40 и добавлена safe-area-inset) -->
                 <nav class="md:hidden fixed bottom-0 left-0 right-0 h-20 pb-[env(safe-area-inset-bottom)] bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-4 z-40">
-                    <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">🏡</span><span class="text-[9px] tracking-wide">Главная</span></button>
-                    <button @click="currentTab = 'tasks'" :class="currentTab === 'tasks' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">📅</span><span class="text-[9px] tracking-wide">Планер</span></button>
-                    <button @click="currentTab = 'finances'" :class="currentTab === 'finances' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">💸</span><span class="text-[9px] tracking-wide">Бюджет</span></button>
-                    <button @click="currentTab = 'habits'" :class="currentTab === 'habits' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16"><span class="text-xl drop-shadow-sm">🌱</span><span class="text-[9px] tracking-wide">Привычки</span></button>
+                    <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16">
+                        <span class="text-xl drop-shadow-sm flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        </span>
+                        <span class="text-[9px] tracking-wide">Главная</span>
+                    </button>
+                    <button @click="currentTab = 'tasks'" :class="currentTab === 'tasks' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16">
+                        <span class="text-xl drop-shadow-sm flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        </span>
+                        <span class="text-[9px] tracking-wide">Планер</span>
+                    </button>
+                    <button @click="currentTab = 'finances'" :class="currentTab === 'finances' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16">
+                        <span class="text-xl drop-shadow-sm flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        </span>
+                        <span class="text-[9px] tracking-wide">Бюджет</span>
+                    </button>
+                    <button @click="currentTab = 'habits'" :class="currentTab === 'habits' ? 'text-emerald-400 font-bold scale-110' : 'text-slate-500'" class="flex flex-col items-center space-y-1 transition-all duration-300 w-16">
+                        <span class="text-xl drop-shadow-sm flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </span>
+                        <span class="text-[9px] tracking-wide">Привычки</span>
+                    </button>
                 </nav>
             </div>
         </template>
