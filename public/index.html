@@ -471,7 +471,7 @@
                         "></h2>
                         <div class="flex items-center space-x-2 bg-slate-900/50 p-1 rounded-full border border-slate-800/60 shadow-inner">
                             <button @click="setEnergy('🧘 Отлично')" :class="energy === '🧘 Отлично' ? 'bg-emerald-500/20 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">🧘 Отлично</button>
-                            <button @click="setEnergy('😐 Нормально')" :class="energy === '😐 Нормально' ? 'bg-slate-700 text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">😐 Нормально</button>
+                            <button @click="setEnergy('😐 Нормально'" :class="energy === '😐 Нормально' ? 'bg-slate-700 text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">😐 Нормально</button>
                             <button @click="setEnergy('🔋 Устал')" :class="energy === '🔋 Устал' ? 'bg-rose-500/20 text-rose-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">🔋 Устал</button>
                         </div>
                     </header>
@@ -656,15 +656,17 @@
                                                     <option class="bg-slate-900 text-slate-200" value="30">На месяц (30)</option>
                                                 </select>
                                             </div>
-                                            <div class="flex justify-between items-center" x-show="newTaskDuration > 1" x-transition>
-                                                <span class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Даты:</span>
-                                                <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-1 max-w-[200px]">
+
+                                            <!-- ОБНОВЛЕННЫЙ ВЕРТИКАЛЬНЫЙ БЛОК ВЫБОРА ДАТ БЕЗ ОГРАНИЧЕНИЯ ШИРИНЫ -->
+                                            <div class="flex flex-col gap-2 pt-1" x-show="newTaskDuration > 1" x-transition>
+                                                <span class="text-[10px] xl:text-xs text-slate-500 uppercase tracking-widest font-semibold">Выберите активные даты:</span>
+                                                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1 w-full">
                                                     <template x-for="(pd, index) in previewDates" :key="pd.dateStr">
                                                         <button @click="togglePreviewDate(index)"
-                                                                :class="pd.selected ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-900 text-slate-500 border border-slate-800'"
-                                                                class="flex-shrink-0 flex flex-col items-center justify-center w-8 h-10 rounded-lg border transition-all">
-                                                            <span class="text-[7px] uppercase font-bold" x-text="pd.dayName"></span>
-                                                            <span class="text-[10px] font-bold" x-text="pd.dayNum"></span>
+                                                                :class="pd.selected ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)] scale-105' : 'bg-slate-900 text-slate-500 border border-slate-800 hover:border-slate-700'"
+                                                                class="flex-shrink-0 flex flex-col items-center justify-center w-10 h-12 rounded-xl border transition-all duration-200">
+                                                            <span class="text-[8px] uppercase font-bold opacity-60" x-text="pd.dayName"></span>
+                                                            <span class="text-xs font-bold mt-0.5" x-text="pd.dayNum"></span>
                                                         </button>
                                                     </template>
                                                 </div>
