@@ -471,7 +471,7 @@
                         "></h2>
                         <div class="flex items-center space-x-2 bg-slate-900/50 p-1 rounded-full border border-slate-800/60 shadow-inner">
                             <button @click="setEnergy('🧘 Отлично')" :class="energy === '🧘 Отлично' ? 'bg-emerald-500/20 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">🧘 Отлично</button>
-                            <button @click="setEnergy('😐 Нормально'" :class="energy === '😐 Нормально' ? 'bg-slate-700 text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">😐 Нормально</button>
+                            <button @click="setEnergy('😐 Нормально')" :class="energy === '😐 Нормально' ? 'bg-slate-700 text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">😐 Нормально</button>
                             <button @click="setEnergy('🔋 Устал')" :class="energy === '🔋 Устал' ? 'bg-rose-500/20 text-rose-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300">🔋 Устал</button>
                         </div>
                     </header>
@@ -553,7 +553,7 @@
 
                                     <div class="flex-1 space-y-2.5">
                                         <template x-for="habit in habits" :key="habit.id">
-                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-950/40 border-slate-800/80 text-slate-400 hover:border-slate-700'" class="w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all duration-300">
+                                            <button @click="toggleHabit(habit)" :class="habit.done ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:border-slate-700'" class="w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all duration-300">
                                                 <span class="text-sm font-medium truncate pr-2" x-text="habit.name"></span>
                                                 <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all" :class="habit.done ? 'border-emerald-500 bg-emerald-500/20' : 'border-slate-700'">
                                                     <span x-show="habit.done" class="text-emerald-400 text-[10px]">✓</span>
@@ -576,7 +576,7 @@
                                     </div>
                                     <div class="flex flex-col gap-3 mt-4">
                                         <div class="relative">
-                                            <input type="number" x-model="newExpenseAmount" @keydown.enter="addExpense()" placeholder="Сумма расхода..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <input type="number" x-model="newExpenseAmount" @keydown.enter="addExpense()" placeholder="Сумма трат..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                             <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">₽</span>
                                         </div>
                                         <button @click="addExpense()" class="w-full bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] text-black font-bold text-sm px-5 py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5">Внести расход</button>
@@ -657,16 +657,16 @@
                                                 </select>
                                             </div>
 
-                                            <!-- ОБНОВЛЕННЫЙ ВЕРТИКАЛЬНЫЙ БЛОК ВЫБОРА ДАТ БЕЗ ОГРАНИЧЕНИЯ ШИРИНЫ -->
-                                            <div class="flex flex-col gap-2 pt-1" x-show="newTaskDuration > 1" x-transition>
-                                                <span class="text-[10px] xl:text-xs text-slate-500 uppercase tracking-widest font-semibold">Выберите активные даты:</span>
-                                                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1 w-full">
+                                            <!-- ОБНОВЛЕННЫЙ ВЕРТИКАЛЬНЫЙ БЛОК ВЫБОРА ДАТ (Сетка вместо скролла) -->
+                                            <div class="flex flex-col gap-2.5 pt-1" x-show="newTaskDuration > 1" x-transition>
+                                                <span class="text-[10px] xl:text-xs text-slate-400 uppercase tracking-widest font-semibold">Выберите дни для задачи:</span>
+                                                <div class="grid grid-cols-7 gap-1.5 w-full py-1">
                                                     <template x-for="(pd, index) in previewDates" :key="pd.dateStr">
                                                         <button @click="togglePreviewDate(index)"
-                                                                :class="pd.selected ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)] scale-105' : 'bg-slate-900 text-slate-500 border border-slate-800 hover:border-slate-700'"
-                                                                class="flex-shrink-0 flex flex-col items-center justify-center w-10 h-12 rounded-xl border transition-all duration-200">
-                                                            <span class="text-[8px] uppercase font-bold opacity-60" x-text="pd.dayName"></span>
-                                                            <span class="text-xs font-bold mt-0.5" x-text="pd.dayNum"></span>
+                                                                :class="pd.selected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_2px_12px_rgba(16,185,129,0.1)] scale-105' : 'bg-slate-950/40 border-slate-800 text-slate-500 hover:text-slate-300 hover:border-slate-700'"
+                                                                class="w-full aspect-square rounded-xl border flex flex-col items-center justify-center transition-all duration-200">
+                                                            <span class="text-[8px] uppercase font-bold tracking-wider" :class="pd.selected ? 'text-emerald-400/80' : 'text-slate-500'" x-text="pd.dayName"></span>
+                                                            <span class="text-xs font-bold mt-0.5" :class="pd.selected ? 'text-emerald-300' : 'text-slate-400'" x-text="pd.dayNum"></span>
                                                         </button>
                                                     </template>
                                                 </div>
@@ -771,7 +771,7 @@
                                     <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">💸 Добавить расход</h4>
                                     <div class="flex flex-col gap-3">
                                         <div class="relative">
-                                            <input type="number" x-model="newFinanceAmount" @keydown.enter="addDetailedExpense()" placeholder="Сумма в ₽..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                            <input type="number" x-model="newFinanceAmount" @keydown.enter="addDetailedExpense()" placeholder="Сумма в ₽..." class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 rounded-xl p-3.5 pl-4 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                             <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">₽</span>
                                         </div>
                                         <div class="flex gap-2">
@@ -916,7 +916,7 @@
                                 <div class="space-y-4 pt-2">
                                     <div>
                                         <label class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 block font-semibold">Ваше имя</label>
-                                        <input type="text" x-model="editUserName" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                        <input type="text" x-model="editUserName" class="w-full bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                     </div>
                                     <button @click="saveProfile($event)" class="w-full bg-slate-800 hover:bg-emerald-500 hover:text-black text-slate-300 font-bold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]">Сохранить изменения профиля</button>
                                 </div>
@@ -997,7 +997,7 @@
                                     </template>
                                 </div>
                                 <div class="flex gap-2 pt-3 border-t border-slate-800/50">
-                                    <input type="text" x-model="newHabitName" @keydown.enter="addHabit()" placeholder="Новая привычка..." class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
+                                    <input type="text" x-model="newHabitName" @keydown.enter="addHabit()" placeholder="Новая привычка..." class="flex-grow bg-slate-950/60 border border-slate-800 text-sm text-slate-300 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all shadow-inner">
                                     <button @click="addHabit()" class="bg-slate-800 hover:bg-emerald-500 text-slate-300 hover:text-black font-bold text-xl px-5 rounded-xl transition-all duration-300">+</button>
                                 </div>
                             </div>

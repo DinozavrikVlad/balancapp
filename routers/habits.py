@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func, case
 from datetime import date as datetime_date
 import models, schemas
 from database import get_db
@@ -23,15 +24,25 @@ def get_habits(db: Session = Depends(get_db), current_user: models.User = Depend
             models.Habit.id).all()
 
     today_str = datetime_date.today().isoformat()
+
+    # АРХИТЕКТУРНОЕ ИСПРАВЛЕНИЕ: Пакетный запрос (Bulk Query) вместо N+1
+    habit_ids = [h.id for h in user_habits]
+    today_logs = db.query(models.HabitLog).filter(
+        models.HabitLog.habit_id.in_(habit_ids),
+        models.HabitLog.date == today_str
+    ).all()
+    logs_dict = {log.habit_id: log for log in today_logs}
+
     changed = False
     for habit in user_habits:
-        log = db.query(models.HabitLog).filter(models.HabitLog.habit_id == habit.id,
-                                               models.HabitLog.date == today_str).first()
+        log = logs_dict.get(habit.id)
         is_done_today = log.done if log else False
         if habit.done != is_done_today:
             habit.done = is_done_today
             changed = True
-    if changed: db.commit()
+
+    if changed:
+        db.commit()
     return user_habits
 
 
@@ -83,12 +94,16 @@ def toggle_habit(habit_id: int, db: Session = Depends(get_db), current_user: mod
 
 @router.get("/stats")
 def get_habits_stats(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    user_habit_ids = [h.id for h in db.query(models.Habit).filter(models.Habit.user_id == current_user.id).all()]
-    logs = db.query(models.HabitLog).filter(models.HabitLog.habit_id.in_(user_habit_ids)).all()
-    stats = {}
-    for log in logs:
-        if log.date not in stats: stats[log.date] = {"done": 0, "total": 0}
-        stats[log.date]["total"] += 1
-        if log.done: stats[log.date]["done"] += 1
-    return {date_str: round((val["done"] / val["total"]) * 100) if val["total"] > 0 else 0 for date_str, val in
-            stats.items()}
+    # АРХИТЕКТУРНОЕ ИСПРАВЛЕНИЕ: Выполняем SQL-агрегацию на стороне СУБД для экономии памяти сервера
+    results = db.query(
+        models.HabitLog.date,
+        func.sum(case((models.HabitLog.done == True, 1), else_=0)),
+        func.count(models.HabitLog.id)
+    ).join(models.Habit, models.Habit.id == models.HabitLog.habit_id) \
+        .filter(models.Habit.user_id == current_user.id) \
+        .group_by(models.HabitLog.date).all()
+
+    return {
+        date_str: round((done_count / total_count) * 100) if total_count > 0 else 0
+        for date_str, done_count, total_count in results
+    }

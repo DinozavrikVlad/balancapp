@@ -14,14 +14,14 @@ class User(Base):
     habits = relationship("Habit", back_populates="owner", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="owner", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="owner", cascade="all, delete-orphan")
-    categories = relationship("Category", back_populates="owner", cascade="all, delete-orphan") # ДОБАВЛЕНО
+    categories = relationship("Category", back_populates="owner", cascade="all, delete-orphan")
 
-# ДОБАВЛЕНО: Таблица категорий
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # ОПТИМИЗАЦИЯ СУБД: Индексируем связи для быстрого поиска категорий пользователя
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     owner = relationship("User", back_populates="categories")
 
 class Habit(Base):
@@ -29,15 +29,17 @@ class Habit(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     done = Column(Boolean, default=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # ОПТИМИЗАЦИЯ СУБД: Индексируем связи
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     owner = relationship("User", back_populates="habits")
     logs = relationship("HabitLog", back_populates="habit", cascade="all, delete-orphan")
 
 class HabitLog(Base):
     __tablename__ = "habit_logs"
     id = Column(Integer, primary_key=True, index=True)
-    habit_id = Column(Integer, ForeignKey("habits.id", ondelete="CASCADE"), nullable=False)
-    date = Column(String, nullable=False)
+    # ОПТИМИЗАЦИЯ СУБД: Индексируем связи
+    habit_id = Column(Integer, ForeignKey("habits.id", ondelete="CASCADE"), nullable=False, index=True)
+    date = Column(String, nullable=False, index=True)  # Добавлен индекс на дату
     done = Column(Boolean, default=False)
     habit = relationship("Habit", back_populates="logs")
 
@@ -46,7 +48,8 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Float, nullable=False)
     category = Column(String, default="Разное")
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # ОПТИМИЗАЦИЯ СУБД: Индексируем связи
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     owner = relationship("User", back_populates="transactions")
 
 class Task(Base):
@@ -57,5 +60,6 @@ class Task(Base):
     done = Column(Boolean, default=False)
     date = Column(String, index=True)
     series_id = Column(String, index=True, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # ОПТИМИЗАЦИЯ СУБД: Индексируем связи
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     owner = relationship("User", back_populates="tasks")
