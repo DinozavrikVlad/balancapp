@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import models
 from database import engine
+import os
 
 # Импортируем наши новые модули
 from routers import auth, habits, finances, tasks
@@ -23,4 +24,6 @@ app.include_router(finances.router)
 app.include_router(tasks.router)
 
 # Раздача фронтенда (всегда в самом конце!)
-app.mount("/", StaticFiles(directory="public", html=True), name="public")
+script_dir = os.path.dirname(__file__)
+public_dir = os.path.join(script_dir, "public")
+app.mount("/", StaticFiles(directory=public_dir, html=True), name="public")
